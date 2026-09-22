@@ -1,6 +1,6 @@
 # java-code-fomatter
 
-Format java source files using operator precedence and scope.
+Format Java source files using operator precedence and scope.
 
 ## Requirements
 
