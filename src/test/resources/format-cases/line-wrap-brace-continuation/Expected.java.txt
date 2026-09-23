@@ -1,0 +1,9 @@
+package sample;
+
+public class WrapBraceContinuation {
+    public void run() {
+        int[] values = { oneHundredAndOneValue, oneHundredAndTwoValue, oneHundredAndThreeValue, oneHundredAndFourValue,
+        };
+        System.out.println(values.length);
+    }
+}

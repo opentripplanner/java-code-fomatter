@@ -1,0 +1,10 @@
+package sample;
+
+public class LongTextBlock {
+    void run() {
+        String s = """
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+            """;
+        System.out.println(s);
+    }
+}

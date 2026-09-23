@@ -1,0 +1,14 @@
+package sample;
+
+public class TextBlock2 {
+        public void run() {
+    String s = """
+            hello
+            world
+            """;
+    System.out.println("[" + s + "]");
+        }
+    public static void main(String[] args) {
+        new TextBlock2().run();
+    }
+}

@@ -1,0 +1,12 @@
+package sample;
+
+public class Comments {
+    public void run() {
+        String url = "http://example.com/some/really/long/path/that/pushes/this/well/past/the/one/twenty/column/limit/here";
+        callSomethingReallyLongHereWithArgs(argOne, argTwo, argThree, argFour, argFive); // a trailing comment note about a, b
+        // a comment with /* fake block comment markers */ inside it
+        String weird = "a string with // fake line comment markers inside it that is also quite long to push past one twenty";
+        char q = '\'';
+        char bs = '\\';
+    }
+}

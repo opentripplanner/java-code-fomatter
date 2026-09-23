@@ -1,0 +1,11 @@
+package sample;
+
+public class OperatorSplit {
+    public void run() {
+        boolean r = conditionAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+            && conditionB;
+        java.util.function.Function<Integer,
+            Integer> f = xValueNameThatIsQuiteLongIndeedForTestingPurposesHereYes
+            -> xValueNameThatIsQuiteLongIndeedForTestingPurposesHereYes + 1;
+    }
+}

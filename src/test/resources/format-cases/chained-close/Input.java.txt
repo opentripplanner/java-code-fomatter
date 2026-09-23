@@ -1,0 +1,13 @@
+package sample;
+
+import java.util.List;
+
+public class ChainedClose {
+public void run(List<Runnable> tasks) {
+tasks.forEach(t -> {
+System.out.println("running");
+t.run();
+});
+System.out.println("done");
+}
+}

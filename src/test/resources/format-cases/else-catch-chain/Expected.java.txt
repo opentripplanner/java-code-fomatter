@@ -1,0 +1,23 @@
+package sample;
+
+public class ElseCatch {
+    public void run() {
+        try {
+            if (cond1) {
+                doA();
+            } else if (cond2) {
+                doB();
+            } else {
+                try {
+                    doC();
+                } catch (RuntimeException e) {
+                    doD();
+                } finally {
+                    doE();
+                }
+            }
+        } catch (Exception e) {
+            doF();
+        }
+    }
+}
