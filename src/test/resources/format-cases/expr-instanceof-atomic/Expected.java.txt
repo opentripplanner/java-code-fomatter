@@ -1,0 +1,8 @@
+package sample;
+
+public class InstanceofAtomic {
+    void run() {
+        var isMatch =
+            someObjectVariable instanceof SomeReallyLongTypeNameHereForTestingPurposes;
+    }
+}

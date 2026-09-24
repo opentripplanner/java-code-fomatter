@@ -1,0 +1,7 @@
+package sample;
+
+public class Ternary {
+    void run() {
+        var chosen = someCondition ? someReallyLongExpressionForTheTrueCase : someOtherReallyLongExpressionForFalse;
+    }
+}

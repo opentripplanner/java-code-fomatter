@@ -7,32 +7,43 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 /**
- * Formatting options, loadable from a {@code .properties} file. Currently just the column at which
- * {@link LineWrapper} wraps a line.
+ * Formatting options, loadable from a {@code .properties} file: the column at which
+ * {@link LineWrapper}/{@link ExpressionWrapper} wrap a line, and the number of spaces per indent
+ * level used throughout {@link ScopeReindenter}, {@link LineWrapper} and {@link ExpressionWrapper}.
  */
-public record FormatterConfig(int wrapAtColumn) {
+public record FormatterConfig(int wrapAtColumn, int indent) {
 
     public static final String FILE_NAME = ".jcf.properties";
     private static final int DEFAULT_WRAP_AT_COLUMN = 120;
+    private static final int DEFAULT_INDENT = 4;
 
-    public static final FormatterConfig DEFAULT = new FormatterConfig(DEFAULT_WRAP_AT_COLUMN);
+    public static final FormatterConfig DEFAULT = new FormatterConfig(DEFAULT_WRAP_AT_COLUMN, DEFAULT_INDENT);
 
     public FormatterConfig {
         if (wrapAtColumn < 1) {
             throw new IllegalArgumentException("wrapAtColumn must be at least 1, was " + wrapAtColumn);
         }
+        if (indent < 1) {
+            throw new IllegalArgumentException("indent must be at least 1, was " + indent);
+        }
     }
 
-    /** Reads {@code wrapAtColumn}, falling back to {@link #DEFAULT} for anything unset. */
+    /** Reads {@code wrapAtColumn}/{@code indent}, falling back to {@link #DEFAULT} for anything unset. */
     public static FormatterConfig from(Properties properties) {
-        String value = properties.getProperty("wrapAtColumn");
+        int wrapAtColumn = intProperty(properties, "wrapAtColumn", DEFAULT.wrapAtColumn());
+        int indent = intProperty(properties, "indent", DEFAULT.indent());
+        return new FormatterConfig(wrapAtColumn, indent);
+    }
+
+    private static int intProperty(Properties properties, String key, int defaultValue) {
+        String value = properties.getProperty(key);
         if (value == null) {
-            return DEFAULT;
+            return defaultValue;
         }
         try {
-            return new FormatterConfig(Integer.parseInt(value.trim()));
+            return Integer.parseInt(value.trim());
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("wrapAtColumn must be an integer, was '" + value + "'", e);
+            throw new IllegalArgumentException(key + " must be an integer, was '" + value + "'", e);
         }
     }
 

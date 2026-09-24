@@ -1,0 +1,11 @@
+package sample;
+
+public class ReturnThrow {
+    int compute() {
+        return someLongVariableNameHere + anotherLongVariableNameHereToo;
+    }
+
+    void fail() {
+        throw new IllegalStateException(someLongVariableNameHere + anotherLongVariableNameHereToo);
+    }
+}

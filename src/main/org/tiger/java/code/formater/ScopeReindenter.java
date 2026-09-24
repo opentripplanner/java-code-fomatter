@@ -19,12 +19,10 @@ package org.tiger.java.code.formater;
  */
 final class ScopeReindenter {
 
-    private static final int INDENT_WIDTH = 4;
-
     private ScopeReindenter() {
     }
 
-    static String reindent(String source) {
+    static String reindent(String source, int indentWidth) {
         LiteralScanner.Scan scan = LiteralScanner.scan(source);
         StringBuilder out = new StringBuilder(source.length());
         int depth = 0;
@@ -59,9 +57,24 @@ final class ScopeReindenter {
                     // so adding a continuation bonus on top of it would double-count the nesting.
                     boolean isContinuation = !previousEndsStatement && previousNetBracesZero;
                     int leadingCloses = countLeadingCloses(scan, lineStart, contentEnd);
-                    int baseDepth = isContinuation ? depth + 1 : depth;
+                    int baseDepth;
+                    if (isContinuation) {
+                        // Never *decrease* a continuation line's depth below what it already had:
+                        // ScopeReindenter only knows brace/scope depth, not operator precedence, so
+                        // it can't derive a multi-level cascade like ExpressionWrapper's (e.g. a
+                        // bitwise expression split across several precedence tiers) - but it must
+                        // not flatten one back down to a single "+1" either, or reformatting
+                        // already-wrapped output wouldn't be idempotent. depth + 1 is still the
+                        // floor, so a continuation that's genuinely new (not already deeper) still
+                        // gets the normal single-level bump.
+                        int existingIndent = rawLine.length() - trimmed.length();
+                        int preExistingDepth = existingIndent / indentWidth + leadingCloses;
+                        baseDepth = Math.max(depth + 1, preExistingDepth);
+                    } else {
+                        baseDepth = depth;
+                    }
                     int displayDepth = Math.max(0, baseDepth - leadingCloses);
-                    out.append(" ".repeat(displayDepth * INDENT_WIDTH));
+                    out.append(" ".repeat(displayDepth * indentWidth));
                     out.append(trimmed);
                 }
                 int netBraces = countNetBraces(scan, lineStart, contentEnd);

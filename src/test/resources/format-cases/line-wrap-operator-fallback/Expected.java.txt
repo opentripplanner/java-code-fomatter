@@ -2,7 +2,7 @@ package sample;
 
 public class OperatorFallback {
     public void run() {
-        boolean result = conditionOne && conditionTwo
-            && conditionThree;
+        boolean result =
+            conditionOne && conditionTwo && conditionThree;
     }
 }

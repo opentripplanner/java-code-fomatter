@@ -2,11 +2,13 @@ package sample;
 
 public class Comments {
     public void run() {
-        String url = "http://example.com/some/really/long/path/here";
+        String url =
+            "http://example.com/some/really/long/path/here";
         compute(argOne, argTwo,
             argThree); // trailing comment, with a comma
         // a comment with /* fake block comment markers */ inside it
-        String weird = "a string with // fake line comment markers inside";
+        String weird =
+            "a string with // fake line comment markers inside";
         char q = '\'';
         char bs = '\\';
     }

@@ -1,0 +1,11 @@
+package sample;
+
+public class BitwiseCascade {
+    void run() {
+        int resultValueHere =
+            firstOperandValue & secondOperandValue
+                ^ thirdOperandValue
+                    | fourthOperandValue
+            || fifthOperandValue;
+    }
+}

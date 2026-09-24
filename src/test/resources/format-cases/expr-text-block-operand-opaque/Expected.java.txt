@@ -1,0 +1,12 @@
+package sample;
+
+public class TextBlockOperandOpaque {
+    void run() {
+        var combinedResultHere =
+            someReallyLongPrefixVariableNameHere
+            + """
+            hello
+            world
+            """;
+    }
+}

@@ -16,8 +16,6 @@ import java.util.List;
  */
 final class LineWrapper {
 
-    private static final int INDENT_WIDTH = 4;
-
     // Longest match first, so a multi-character operator is never split in half.
     private static final String[] OPERATORS = {
         ">>>=", "<<=", ">>=", ">>>",
@@ -35,7 +33,7 @@ final class LineWrapper {
     private LineWrapper() {
     }
 
-    static WrapResult wrap(String source, int maxColumns) {
+    static WrapResult wrap(String source, int maxColumns, int indentWidth) {
         LiteralScanner.Scan scan = LiteralScanner.scan(source);
         StringBuilder out = new StringBuilder(source.length());
         List<Integer> unwrappable = new ArrayList<>();
@@ -55,7 +53,7 @@ final class LineWrapper {
             if (contentEnd - lineStart <= maxColumns) {
                 out.append(source, lineStart, contentEnd);
             } else {
-                List<String> fragments = wrapLine(scan, lineStart, contentEnd, bracketDepth, maxColumns);
+                List<String> fragments = wrapLine(scan, lineStart, contentEnd, bracketDepth, maxColumns, indentWidth);
                 if (fragments == null) {
                     out.append(source, lineStart, contentEnd);
                     unwrappable.add(lineNumber);
@@ -86,15 +84,15 @@ final class LineWrapper {
      * exists anywhere in it (a wholly-verbatim line, or one with no comma/operator candidate that
      * fits the column budget).
      */
-    private static List<String> wrapLine(LiteralScanner.Scan scan, int rangeStart, int rangeEnd, int depthAtStart, int maxColumns) {
+    private static List<String> wrapLine(LiteralScanner.Scan scan, int rangeStart, int rangeEnd, int depthAtStart, int maxColumns, int indentWidth) {
         String source = scan.source();
         int printedIndent = 0;
         while (rangeStart + printedIndent < rangeEnd && source.charAt(rangeStart + printedIndent) == ' ') {
             printedIndent++;
         }
         int leadingCloses = ScopeReindenter.countLeadingCloses(scan, rangeStart, rangeEnd);
-        int logicalIndent = printedIndent + leadingCloses * INDENT_WIDTH;
-        int continuationBaseIndent = logicalIndent + INDENT_WIDTH;
+        int logicalIndent = printedIndent + leadingCloses * indentWidth;
+        int continuationBaseIndent = logicalIndent + indentWidth;
 
         List<String> fragments = new ArrayList<>();
         int curStart = rangeStart;
@@ -115,7 +113,7 @@ final class LineWrapper {
             curDepth += netBrackets(scan, curStart, bp.continueStart);
             curStart = bp.continueStart;
             int fragLeadingCloses = ScopeReindenter.countLeadingCloses(scan, curStart, rangeEnd);
-            curColumnOffset = Math.max(0, continuationBaseIndent - fragLeadingCloses * INDENT_WIDTH);
+            curColumnOffset = Math.max(0, continuationBaseIndent - fragLeadingCloses * indentWidth);
             first = false;
         }
     }
@@ -213,7 +211,10 @@ final class LineWrapper {
                 }
                 int keepEnd = afterToken ? c.position() + 1 : trimTrailingWhitespace(source, c.position());
                 int visual = columnOffset + (keepEnd - rangeStart);
-                if (visual <= maxColumns && (best == null || c.position() > best.position())) {
+                // keepEnd <= rangeStart means there's nothing to keep before the break (the
+                // operator is the first thing on the line after trimming) - not real progress,
+                // and looping on it would keep re-selecting the same non-advancing candidate.
+                if (keepEnd > rangeStart && visual <= maxColumns && (best == null || c.position() > best.position())) {
                     best = c;
                 }
             }

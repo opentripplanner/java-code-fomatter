@@ -1,0 +1,8 @@
+package sample;
+
+public class DeclaratorSplit {
+    void run() {
+        var aVariableWithALongName =
+            anotherVariable + yetAnotherVariable;
+    }
+}

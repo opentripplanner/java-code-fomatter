@@ -37,8 +37,9 @@ public final class SourceFormatter {
             return new ValidationFailed(original.diagnostics());
         }
 
-        String reindented = ScopeReindenter.reindent(source);
-        LineWrapper.WrapResult wrapped = LineWrapper.wrap(reindented, config.wrapAtColumn());
+        String reindented = ScopeReindenter.reindent(source, config.indent());
+        String expressionWrapped = ExpressionWrapper.wrap(reindented, config);
+        LineWrapper.WrapResult wrapped = LineWrapper.wrap(expressionWrapped, config.wrapAtColumn(), config.indent());
 
         SyntaxValidator.ValidationResult revalidated = SyntaxValidator.validate(wrapped.text());
         if (!revalidated.valid()) {

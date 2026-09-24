@@ -1,0 +1,9 @@
+package sample;
+
+public class MultiDeclaratorFallback {
+    void run() {
+        int firstVariableNameHere = 1,
+            secondVariableNameHere = 2,
+            thirdVariableNameHere = 3;
+    }
+}

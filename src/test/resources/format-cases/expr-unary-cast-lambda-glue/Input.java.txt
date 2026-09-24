@@ -1,0 +1,10 @@
+package sample;
+
+import java.util.function.Function;
+
+public class UnaryCastLambdaGlue {
+    void run() {
+        var negated = -someReallyLongExpressionNameThatWontFitOnThisLineNoMatterWhat;
+        Function<Integer, Integer> f = x -> someReallyLongExpressionInvolvingXThatWontFitHere;
+    }
+}

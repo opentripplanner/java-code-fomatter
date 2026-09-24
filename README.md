@@ -2,10 +2,13 @@
 
 Format Java source files using operator precedence and scope.
 
-v1 formats indentation/scope only: it reindents by brace nesting and wraps
-lines over 120 columns at safe token boundaries. It does not touch operator
-precedence, parenthesization, or general token spacing yet - see
-[Known limitations](#known-limitations).
+It reindents by brace nesting, and wraps over-long lines two ways: variable/
+field declarations, plain assignments, `return` and `throw` are wrapped at
+real operator-precedence boundaries (`ExpressionWrapper`); everything else
+still over budget falls back to a flat, greedy token-boundary wrap
+(`LineWrapper`). It does not yet touch general token spacing, or extend
+precedence-aware wrapping to control-flow headers, method signatures, or
+annotations - see [Known limitations](#known-limitations).
 
 ## Requirements
 
@@ -33,11 +36,13 @@ override defaults:
 
 ```properties
 wrapAtColumn=100
+indent=2
 ```
 
-| Key            | Default | Meaning                                    |
-| -------------- | ------- | ------------------------------------------ |
-| `wrapAtColumn` | `120`   | Column at which `LineWrapper` wraps a line |
+| Key            | Default | Meaning                                              |
+| -------------- | ------- | ----------------------------------------------------- |
+| `wrapAtColumn` | `120`   | Column at which a line gets wrapped                    |
+| `indent`       | `4`     | Spaces per indent level, used everywhere (scope, wrapped lines, and each precedence-tier step) |
 
 No file present means the defaults apply.
 
@@ -88,28 +93,35 @@ running the suite needs no separate command.
 
 ## Known limitations
 
-v1 is deliberately narrow. In particular:
+Deliberately narrow. In particular:
 
 - **Brace-less control-flow bodies aren't specially indented.** `if (x)\n
   foo();` has no brace to encode its nesting, so its body is indented at the
   same depth as the `if` itself - including flattening a body a human had
   already indented correctly. Adding braces automatically is a natural next
   step, deferred for now.
-- **No continuation/hanging indent for a statement that fits under 120
-  columns but already spans multiple lines for other reasons** - only lines
-  actually over 120 columns get wrapped.
-- **Generic type-argument lists (`<...>`) aren't tracked as a bracket kind**
-  for wrapping, so a comma inside `Map<String, List<Integer>>` may be treated
-  as the same depth as its enclosing call - a readability blind spot, not a
-  correctness bug.
-- **A line wholly inside a text block or string literal that's still over 120
-  columns is left as-is and reported** - it cannot be safely wrapped without
-  changing its value.
+- **Precedence-aware wrapping only covers declarations, plain assignments,
+  `return` and `throw`.** `if`/`while`/`for` conditions, method parameter and
+  `throws` lists, and annotation arguments still use the older flat wrapper -
+  a complex condition sitting next to a nicely-wrapped assignment can look
+  formatted by two different algorithms until this is widened.
+- **Multi-declarator statements** (`int a = 1, b = 2;`) aren't covered by the
+  precedence-aware wrapper either - same flat-wrapper fallback.
+- **Generic type-argument commas (`Map<String, List<Integer>>`) aren't tracked
+  as a bracket kind** by the flat wrapper, so they may read as the same depth
+  as their enclosing call - a readability blind spot, not a correctness bug.
+- **A line wholly inside a text block or string literal that's still over the
+  column limit is left as-is and reported** - it cannot be safely wrapped
+  without changing its value.
+- A wrapping decision that wouldn't actually shorten the longest resulting
+  line is skipped - the statement is left as-is rather than split for no
+  benefit.
+- A method chain's first call is always split onto its own line
+  (`a.stream()` never stays glued to the receiver); an opt-in to keep it
+  glued is designed but not implemented yet.
 - `switch` case bodies aren't given special per-case indentation.
 - Multi-line comment interior lines are left verbatim even if originally
   misindented.
 - Column width is measured as `String.length()` (UTF-16 units), not display
   width.
-- Indent width (4 spaces) is hardcoded; only the wrap column is configurable
-  (see [Configuration](#configuration)).
 

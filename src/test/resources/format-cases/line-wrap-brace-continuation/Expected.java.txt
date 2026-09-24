@@ -2,8 +2,8 @@ package sample;
 
 public class BraceContinuation {
     public void run() {
-        int[] values = { one, two, three, four, five, six,
-        };
+        int[] values =
+            { one, two, three, four, five, six, };
         System.out.println(values.length);
     }
 }

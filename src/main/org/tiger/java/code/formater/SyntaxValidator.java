@@ -1,6 +1,9 @@
 package org.tiger.java.code.formater;
 
+import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.util.JavacTask;
+import com.sun.source.util.SourcePositions;
+import com.sun.source.util.Trees;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URI;
@@ -25,7 +28,29 @@ final class SyntaxValidator {
     record ValidationResult(boolean valid, List<Diagnostic<? extends JavaFileObject>> diagnostics) {
     }
 
+    /** A parsed compilation unit plus the {@link SourcePositions} needed to locate its nodes in source. */
+    record Parsed(CompilationUnitTree unit, SourcePositions positions) {
+    }
+
     private SyntaxValidator() {
+    }
+
+    /**
+     * Parses {@code source} and returns its tree, assuming it's already known to be syntactically
+     * valid (e.g. via a prior {@link #validate(String)} call) - callers that haven't validated first
+     * should expect a possibly-incomplete tree on malformed input, not an exception.
+     */
+    static Parsed parseTree(String source) throws IOException {
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
+        try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(diagnostics, null, null)) {
+            JavaCompiler.CompilationTask task = compiler.getTask(
+                new StringWriter(), fileManager, diagnostics, null, null, List.of(new StringSource(source)));
+            JavacTask javacTask = (JavacTask) task;
+            CompilationUnitTree unit = javacTask.parse().iterator().next();
+            SourcePositions positions = Trees.instance(javacTask).getSourcePositions();
+            return new Parsed(unit, positions);
+        }
     }
 
     static ValidationResult validate(Path file) throws IOException {
