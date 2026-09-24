@@ -1,11 +1,9 @@
 package sample;
 
-import java.util.List;
 import java.util.function.BiFunction;
 
 public class NestedComma {
-    public void run(List<Integer> xs) {
-        BiFunction<Long, Long, Long> reducer = (accumulatorLongValueName, itemLongValueNameAlsoQuiteLongIndeed) -> accumulatorLongValueName + itemLongValueNameAlsoQuiteLongIndeed;
-        System.out.println(reducer);
+    public void run() {
+        BiFunction<Integer, Integer, Integer> adder = (first, second) -> first + second;
     }
 }

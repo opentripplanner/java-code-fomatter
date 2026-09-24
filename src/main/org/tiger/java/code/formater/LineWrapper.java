@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Wraps lines over {@value #MAX_COLUMNS} columns at safe token boundaries: a top-level comma when
- * one fits, otherwise a binary/logical operator or method-chain {@code .}, walking bracket depth
+ * Wraps lines over a configured column budget at safe token boundaries: a top-level comma when one
+ * fits, otherwise a binary/logical operator or method-chain {@code .}, walking bracket depth
  * outward-in so a nested (e.g. lambda parameter) comma is tried before giving up on commas
  * altogether. A line with no safe break point - or one that's wholly inside a string/text block -
  * is left untouched and reported rather than corrupted; the caller decides what to do with that.
@@ -16,7 +16,6 @@ import java.util.List;
  */
 final class LineWrapper {
 
-    static final int MAX_COLUMNS = 120;
     private static final int INDENT_WIDTH = 4;
 
     // Longest match first, so a multi-character operator is never split in half.
@@ -36,7 +35,7 @@ final class LineWrapper {
     private LineWrapper() {
     }
 
-    static WrapResult wrap(String source) {
+    static WrapResult wrap(String source, int maxColumns) {
         LiteralScanner.Scan scan = LiteralScanner.scan(source);
         StringBuilder out = new StringBuilder(source.length());
         List<Integer> unwrappable = new ArrayList<>();
@@ -53,10 +52,10 @@ final class LineWrapper {
                 contentEnd--;
             }
 
-            if (contentEnd - lineStart <= MAX_COLUMNS) {
+            if (contentEnd - lineStart <= maxColumns) {
                 out.append(source, lineStart, contentEnd);
             } else {
-                List<String> fragments = wrapLine(scan, lineStart, contentEnd, bracketDepth);
+                List<String> fragments = wrapLine(scan, lineStart, contentEnd, bracketDepth, maxColumns);
                 if (fragments == null) {
                     out.append(source, lineStart, contentEnd);
                     unwrappable.add(lineNumber);
@@ -87,7 +86,7 @@ final class LineWrapper {
      * exists anywhere in it (a wholly-verbatim line, or one with no comma/operator candidate that
      * fits the column budget).
      */
-    private static List<String> wrapLine(LiteralScanner.Scan scan, int rangeStart, int rangeEnd, int depthAtStart) {
+    private static List<String> wrapLine(LiteralScanner.Scan scan, int rangeStart, int rangeEnd, int depthAtStart, int maxColumns) {
         String source = scan.source();
         int printedIndent = 0;
         while (rangeStart + printedIndent < rangeEnd && source.charAt(rangeStart + printedIndent) == ' ') {
@@ -104,11 +103,11 @@ final class LineWrapper {
         boolean first = true;
         while (true) {
             int visualLength = curColumnOffset + (rangeEnd - curStart);
-            if (visualLength <= MAX_COLUMNS) {
+            if (visualLength <= maxColumns) {
                 fragments.add(first ? source.substring(curStart, rangeEnd) : withIndent(scan, curStart, rangeEnd, curColumnOffset));
                 return fragments;
             }
-            BreakPoint bp = findBreakPoint(scan, curStart, rangeEnd, curColumnOffset, curDepth);
+            BreakPoint bp = findBreakPoint(scan, curStart, rangeEnd, curColumnOffset, curDepth, maxColumns);
             if (bp == null) {
                 return null;
             }
@@ -128,7 +127,7 @@ final class LineWrapper {
     private record BreakPoint(int keepEnd, int continueStart) {
     }
 
-    private static BreakPoint findBreakPoint(LiteralScanner.Scan scan, int start, int end, int columnOffset, int depthAtStart) {
+    private static BreakPoint findBreakPoint(LiteralScanner.Scan scan, int start, int end, int columnOffset, int depthAtStart, int maxColumns) {
         String source = scan.source();
         List<Candidate> commas = new ArrayList<>();
         List<Candidate> operators = new ArrayList<>();
@@ -173,11 +172,11 @@ final class LineWrapper {
             }
         }
 
-        BreakPoint fromComma = bestByDepth(source, commas, start, columnOffset, true);
+        BreakPoint fromComma = bestByDepth(source, commas, start, columnOffset, true, maxColumns);
         if (fromComma != null) {
             return fromComma;
         }
-        return bestByDepth(source, operators, start, columnOffset, false);
+        return bestByDepth(source, operators, start, columnOffset, false, maxColumns);
     }
 
     private static int matchOperator(String source, int i, int end) {
@@ -196,7 +195,7 @@ final class LineWrapper {
      * operator/dot semantics (break moves to the start of the continuation, trailing whitespace on
      * the kept side trimmed).
      */
-    private static BreakPoint bestByDepth(String source, List<Candidate> candidates, int rangeStart, int columnOffset, boolean afterToken) {
+    private static BreakPoint bestByDepth(String source, List<Candidate> candidates, int rangeStart, int columnOffset, boolean afterToken, int maxColumns) {
         if (candidates.isEmpty()) {
             return null;
         }
@@ -214,7 +213,7 @@ final class LineWrapper {
                 }
                 int keepEnd = afterToken ? c.position() + 1 : trimTrailingWhitespace(source, c.position());
                 int visual = columnOffset + (keepEnd - rangeStart);
-                if (visual <= MAX_COLUMNS && (best == null || c.position() > best.position())) {
+                if (visual <= maxColumns && (best == null || c.position() > best.position())) {
                     best = c;
                 }
             }

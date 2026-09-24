@@ -2,10 +2,6 @@ package sample;
 
 public class Wrap {
     public void run() {
-        int result = computeSomethingReallyLong(argumentOne, argumentTwo, argumentThree, argumentFour, argumentFive, argumentSix);
-        boolean flag = conditionOne && conditionTwo && conditionThree && conditionFour && conditionFive && conditionSix && conditionSeven;
-        if (someBooleanConditionThatIsQuiteLongInItself && anotherBooleanConditionThatIsAlsoQuiteLong && yetAnotherOneHereToo) {
-            System.out.println("hi");
-        }
+        compute(argumentOne, argumentTwo, argumentThree, argumentFour);
     }
 }

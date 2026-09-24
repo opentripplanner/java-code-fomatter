@@ -1,8 +1,8 @@
 package sample;
 
-public class WrapBraceContinuation {
+public class BraceContinuation {
     public void run() {
-        int[] values = { oneHundredAndOneValue, oneHundredAndTwoValue, oneHundredAndThreeValue, oneHundredAndFourValue,
+        int[] values = { one, two, three, four, five, six,
         };
         System.out.println(values.length);
     }

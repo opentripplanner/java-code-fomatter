@@ -16,9 +16,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.tiger.java.code.formater.FormatterConfig;
 import org.tiger.java.code.formater.SourceFormatter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,11 +36,29 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
  * <p>Fixtures use a {@code .java.txt} extension, not {@code .java}: Jenesis compiles every {@code
  * .java} file under {@code src/test} as real source, so a plain {@code .java} fixture would be
  * compiled as test code instead of copied as a resource.
+ *
+ * <p>All cases share {@code src/test/resources/.jcf.properties} ({@code wrapAtColumn=60}), loaded
+ * through the same {@link FormatterConfig} a real {@code .jcf.properties} would be - a narrower
+ * column budget than the 120-column default keeps fixtures short and readable.
  */
 class FormatterGoldenFileTest {
 
     private static final String INPUT_NAME = "Input.java.txt";
     private static final String EXPECTED_NAME = "Expected.java.txt";
+
+    private static final FormatterConfig CONFIG = loadConfig();
+
+    private static FormatterConfig loadConfig() {
+        String path = "/resources/.jcf.properties";
+        try (InputStream in = FormatterGoldenFileTest.class.getResourceAsStream(path)) {
+            Objects.requireNonNull(in, path + " resource not found on the test classpath");
+            Properties properties = new Properties();
+            properties.load(in);
+            return FormatterConfig.from(properties);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
 
     record FormatCase(String name, String input, String expected) {
         @Override
@@ -77,13 +97,13 @@ class FormatterGoldenFileTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("cases")
     void formatsToExpected(FormatCase testCase) throws IOException {
-        SourceFormatter.Formatted formatted = assertInstanceOf(
-            SourceFormatter.Formatted.class, SourceFormatter.format(testCase.input()), "expected formatting to succeed");
+        SourceFormatter.Formatted formatted = assertInstanceOf(SourceFormatter.Formatted.class,
+            SourceFormatter.format(testCase.input(), CONFIG), "expected formatting to succeed");
         assertEquals(testCase.expected(), formatted.text(), "formatted output did not match Expected.java.txt");
 
         // Idempotency: formatting already-formatted code must be a no-op.
-        SourceFormatter.Formatted reformatted = assertInstanceOf(
-            SourceFormatter.Formatted.class, SourceFormatter.format(testCase.expected()), "expected re-formatting to succeed");
+        SourceFormatter.Formatted reformatted = assertInstanceOf(SourceFormatter.Formatted.class,
+            SourceFormatter.format(testCase.expected(), CONFIG), "expected re-formatting to succeed");
         assertEquals(testCase.expected(), reformatted.text(), "formatting Expected.java.txt again changed it");
     }
 
@@ -100,8 +120,8 @@ class FormatterGoldenFileTest {
             Objects.requireNonNull(in, path + " resource not found on the test classpath");
             String source = new String(in.readAllBytes(), StandardCharsets.UTF_8);
 
-            SourceFormatter.Formatted formatted = assertInstanceOf(
-                SourceFormatter.Formatted.class, SourceFormatter.format(source), "expected formatting to succeed");
+            SourceFormatter.Formatted formatted = assertInstanceOf(SourceFormatter.Formatted.class,
+                SourceFormatter.format(source, CONFIG), "expected formatting to succeed");
             assertFalse(formatted.unwrappableLines().isEmpty(),
                 "expected the over-length text-block line to be reported as unwrappable");
         }

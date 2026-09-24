@@ -40,14 +40,23 @@ public class JavaCodeFomatter {
             System.exit(2);
         }
 
+        FormatterConfig config;
+        try {
+            config = FormatterConfig.loadFromDirectory(Path.of(""));
+        } catch (IOException | IllegalArgumentException e) {
+            System.err.println(FormatterConfig.FILE_NAME + ": " + e.getMessage());
+            System.exit(2);
+            return;
+        }
+
         boolean ok = true;
         for (String fileArg : files) {
-            ok &= processFile(Path.of(fileArg), write);
+            ok &= processFile(Path.of(fileArg), write, config);
         }
         System.exit(ok ? 0 : 1);
     }
 
-    private static boolean processFile(Path path, boolean write) {
+    private static boolean processFile(Path path, boolean write, FormatterConfig config) {
         String source;
         try {
             source = Files.readString(path, StandardCharsets.UTF_8);
@@ -58,7 +67,7 @@ public class JavaCodeFomatter {
 
         SourceFormatter.FormatResult result;
         try {
-            result = SourceFormatter.format(source);
+            result = SourceFormatter.format(source, config);
         } catch (IOException e) {
             System.err.println(path + ": " + e.getMessage());
             return false;
@@ -77,8 +86,8 @@ public class JavaCodeFomatter {
             }
             case SourceFormatter.Formatted(var text, var unwrappableLines) -> {
                 for (int line : unwrappableLines) {
-                    System.err.println(
-                        path + ":" + line + ": line exceeds 120 columns with no safe break point; left unchanged");
+                    System.err.println(path + ":" + line + ": line exceeds " + config.wrapAtColumn()
+                        + " columns with no safe break point; left unchanged");
                 }
                 if (write) {
                     try {
@@ -96,6 +105,7 @@ public class JavaCodeFomatter {
     }
 
     private static void printUsage(PrintStream out) {
-        out.println("Usage: java -m java.code.fomatter [-w|--write] <file.java> [<file.java>...]");
+        out.println("Usage: java -m org.tiger.code.fomatter [-w|--write] <file.java> [<file.java>...]");
+        out.println("Reads " + FormatterConfig.FILE_NAME + " from the current directory if present.");
     }
 }

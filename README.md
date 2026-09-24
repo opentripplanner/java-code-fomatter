@@ -21,10 +21,25 @@ java -m org.tiger.code.fomatter --write <file.java> [<file.java>...]
 
 The formatter first validates that a file is syntactically correct Java
 (without resolving its classpath) and leaves it untouched, reporting
-diagnostics, if it isn't. If a line still exceeds 120 columns after
-reindenting and wrapping and has no safe break point (e.g. it's a single long
-string literal or a text-block line), it's left unchanged and reported rather
-than corrupted.
+diagnostics, if it isn't. If a line still exceeds the configured column limit
+after reindenting and wrapping and has no safe break point (e.g. it's a single
+long string literal or a text-block line), it's left unchanged and reported
+rather than corrupted.
+
+### Configuration
+
+Drop a `.jcf.properties` file in the directory you run the formatter from to
+override defaults:
+
+```properties
+wrapAtColumn=100
+```
+
+| Key            | Default | Meaning                                    |
+| -------------- | ------- | ------------------------------------------ |
+| `wrapAtColumn` | `120`   | Column at which `LineWrapper` wraps a line |
+
+No file present means the defaults apply.
 
 ## Build tool
 
@@ -64,6 +79,10 @@ case also gets a free idempotency check - formatting `Expected.java.txt` again
 must be a no-op. Fixtures use a `.java.txt` extension rather than `.java`,
 since Jenesis compiles any `.java` file under `src/test` as real source.
 
+All cases share `src/test/resources/.jcf.properties` (`wrapAtColumn=60`), the
+same file format and loading path as a real `.jcf.properties` - a narrower
+column budget keeps fixtures short and readable.
+
 `java build/jenesis/Make.java` compiles, tests, and packages both modules, so
 running the suite needs no separate command.
 
@@ -91,6 +110,6 @@ v1 is deliberately narrow. In particular:
   misindented.
 - Column width is measured as `String.length()` (UTF-16 units), not display
   width.
-- Indent width (4 spaces) and line width (120 columns) are hardcoded, with no
-  configuration.
+- Indent width (4 spaces) is hardcoded; only the wrap column is configurable
+  (see [Configuration](#configuration)).
 

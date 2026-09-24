@@ -7,8 +7,8 @@ import javax.tools.JavaFileObject;
 
 /**
  * Orchestrates the formatting pipeline: validate the input is syntactically valid Java, reindent
- * by brace/scope nesting, wrap lines over 120 columns, then re-validate the result as a safety net
- * before it's ever written or printed.
+ * by brace/scope nesting, wrap lines over {@link FormatterConfig#wrapAtColumn()} columns, then
+ * re-validate the result as a safety net before it's ever written or printed.
  */
 public final class SourceFormatter {
 
@@ -28,13 +28,17 @@ public final class SourceFormatter {
     }
 
     public static FormatResult format(String source) throws IOException {
+        return format(source, FormatterConfig.DEFAULT);
+    }
+
+    public static FormatResult format(String source, FormatterConfig config) throws IOException {
         SyntaxValidator.ValidationResult original = SyntaxValidator.validate(source);
         if (!original.valid()) {
             return new ValidationFailed(original.diagnostics());
         }
 
         String reindented = ScopeReindenter.reindent(source);
-        LineWrapper.WrapResult wrapped = LineWrapper.wrap(reindented);
+        LineWrapper.WrapResult wrapped = LineWrapper.wrap(reindented, config.wrapAtColumn());
 
         SyntaxValidator.ValidationResult revalidated = SyntaxValidator.validate(wrapped.text());
         if (!revalidated.valid()) {
