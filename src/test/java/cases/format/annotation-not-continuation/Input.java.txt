@@ -1,0 +1,10 @@
+package sample;
+
+public class Ann {
+private int x;
+
+@Override
+public String toString() {
+return "";
+}
+}

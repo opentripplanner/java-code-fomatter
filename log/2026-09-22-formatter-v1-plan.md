@@ -173,7 +173,7 @@ Production code, all under `src/main/org/tiger/java/code/formater/`:
   existing `module java.code.fomatter { exports org.tiger.java.code.formater; }`.
 
 Test code (new `src/test/` source root, see Testing section for how it's wired):
-- `src/test/module-info.java` — a `@jenesis.test java.code.fomatter`-tagged test
+- `../src/test/java/module-info.java` — a `@jenesis.test java.code.fomatter`-tagged test
   module requiring `java.code.fomatter` plus JUnit Jupiter.
 - `src/test/org/tiger/java/code/formater/FormatterGoldenFileTest.java` — the single
   data-driven test described below.
@@ -218,7 +218,7 @@ so coverage grows by adding files, not code:
   is rejected with diagnostics and left untouched, one asserting an unwrappable
   over-length line (inside a text block) is left untouched and reported rather than
   corrupted.
-- **Jenesis wiring**: tag `src/test/module-info.java` with `@jenesis.test
+- **Jenesis wiring**: tag `../src/test/java/module-info.java` with `@jenesis.test
   java.code.fomatter` (module variant of the main module, per the help text at
   `build/jenesis/Project.java:680`); Jenesis infers `framework=junit-platform` from
   the resolved JUnit dependency. Add the JUnit Jupiter dependency via `@jenesis.pin`

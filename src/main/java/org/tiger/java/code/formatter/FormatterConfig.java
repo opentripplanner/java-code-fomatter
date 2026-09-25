@@ -1,4 +1,4 @@
-package org.tiger.java.code.formater;
+package org.tiger.java.code.formatter;
 
 import java.io.IOException;
 import java.io.InputStream;

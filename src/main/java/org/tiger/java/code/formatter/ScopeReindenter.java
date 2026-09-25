@@ -1,21 +1,31 @@
-package org.tiger.java.code.formater;
+package org.tiger.java.code.formatter;
 
 /**
  * Reindents Java source purely by brace nesting: the leading whitespace of every line is replaced
- * with {@code depth * 4} spaces, where {@code depth} is how many non-verbatim {@code {} } braces
- * are currently open. Nothing else about a line is touched - no token spacing, no brace insertion.
+ * with {@code depth * indentWidth} spaces, where {@code depth} is how many non-verbatim
+ * {@code {}/}} braces are currently open. Nothing else about a line is touched - no token spacing,
+ * no brace insertion.
  *
  * <p>A line whose previous (real) line doesn't end its statement - its last non-comment,
  * non-whitespace character isn't {@code ;}, {@code {} or {@code }} - is a continuation of that
  * statement (e.g. a line {@link LineWrapper} split off, or one a human already wrapped by hand) and
  * gets one extra indent level instead of the current brace depth. This is what makes wrapping
  * idempotent: reformatting an already-wrapped line recognizes it as a continuation instead of
- * flattening it back to the statement's own depth.
+ * flattening it back to the statement's own depth. Two exceptions to the "one extra level" rule:
+ * a continuation line leading with a closing {@code )} (e.g. a wrapped parameter list's closer)
+ * returns to the depth of whatever it's closing instead of drilling deeper, and a complete,
+ * single-line annotation usage (e.g. {@code @Override}) is treated like {@code ;}/{@code {}/
+ * {@code }} - it ends its own unit, so the declaration after it is never misread as continuing it.
  *
  * <p>Text-block interiors, and the line holding a text block's closing {@code """}, are left
  * completely untouched: per JLS 3.10.6 a text block's value depends on the common leading
  * whitespace of its content lines *and* its closing delimiter line, so reindenting that line would
  * silently change the string's value while keeping the file perfectly valid Java.
+ *
+ * <p>A still-open block comment's continuation lines (e.g. a javadoc's {@code " * "} lines) keep
+ * their indentation relative to the comment's own opening line instead of being recomputed from
+ * brace depth - that's what keeps a javadoc's conventional alignment intact when the comment as a
+ * whole shifts to a new depth.
  */
 final class ScopeReindenter {
 
@@ -28,6 +38,8 @@ final class ScopeReindenter {
         int depth = 0;
         boolean previousEndsStatement = true;
         boolean previousNetBracesZero = true;
+        int blockCommentOriginalIndent = 0;
+        int blockCommentNewIndent = 0;
         int n = source.length();
         int lineStart = 0;
         while (lineStart <= n) {
@@ -48,8 +60,22 @@ final class ScopeReindenter {
                 // continuation tracking, same as a comment-only line.
             } else {
                 int firstNonWs = lineStart + (rawLine.length() - trimmed.length());
-                if (scan.kindAt(firstNonWs) == LiteralScanner.Kind.TEXT_BLOCK) {
+                LiteralScanner.Kind firstKind = scan.kindAt(firstNonWs);
+                if (firstKind == LiteralScanner.Kind.TEXT_BLOCK) {
                     out.append(rawLine);
+                } else if (firstKind == LiteralScanner.Kind.BLOCK_COMMENT
+                    && scan.spanAt(firstNonWs).start() != firstNonWs) {
+                    // A continuation line of a still-open block comment (e.g. a javadoc's " * "
+                    // lines): reindent by shifting it to keep its indentation *relative to the
+                    // comment's own opening line*, rather than recomputing from brace depth. That
+                    // preserves conventional internal alignment (javadoc's " * ", ASCII diagrams,
+                    // param-list alignment) while still relocating the whole comment with its
+                    // surrounding code.
+                    int existingIndent = rawLine.length() - trimmed.length();
+                    int shift = existingIndent - blockCommentOriginalIndent;
+                    int newIndent = Math.max(0, blockCommentNewIndent + shift);
+                    out.append(" ".repeat(newIndent));
+                    out.append(trimmed);
                 } else {
                     // A continuation only when the previous line neither ended its statement NOR
                     // already opened a still-unclosed brace of its own (e.g. an array initializer's
@@ -66,14 +92,21 @@ final class ScopeReindenter {
                         // not flatten one back down to a single "+1" either, or reformatting
                         // already-wrapped output wouldn't be idempotent. depth + 1 is still the
                         // floor, so a continuation that's genuinely new (not already deeper) still
-                        // gets the normal single-level bump.
+                        // gets the normal single-level bump - except a line leading with a closing
+                        // ')' (e.g. a wrapped parameter list's closer), which by convention returns
+                        // to the depth of whatever it's closing rather than drilling one deeper.
                         int existingIndent = rawLine.length() - trimmed.length();
                         int preExistingDepth = existingIndent / indentWidth + leadingCloses;
-                        baseDepth = Math.max(depth + 1, preExistingDepth);
+                        int freshBonus = trimmed.startsWith(")") ? depth : depth + 1;
+                        baseDepth = Math.max(freshBonus, preExistingDepth);
                     } else {
                         baseDepth = depth;
                     }
                     int displayDepth = Math.max(0, baseDepth - leadingCloses);
+                    if (firstKind == LiteralScanner.Kind.BLOCK_COMMENT) {
+                        blockCommentOriginalIndent = rawLine.length() - trimmed.length();
+                        blockCommentNewIndent = displayDepth * indentWidth;
+                    }
                     out.append(" ".repeat(displayDepth * indentWidth));
                     out.append(trimmed);
                 }
@@ -140,6 +173,7 @@ final class ScopeReindenter {
         String source = scan.source();
         char last = 0;
         boolean found = false;
+        int parenBalance = 0;
         for (int i = lineStart; i < contentEnd; i++) {
             char c = source.charAt(i);
             if (Character.isWhitespace(c)) {
@@ -153,12 +187,47 @@ final class ScopeReindenter {
                 i = scan.spanAt(i).end() - 1;
                 continue;
             }
+            if (!scan.isVerbatim(i)) {
+                if (c == '(') {
+                    parenBalance++;
+                } else if (c == ')') {
+                    parenBalance--;
+                }
+            }
             last = c;
             found = true;
         }
         if (!found) {
             return null;
         }
-        return last == ';' || last == '{' || last == '}';
+        if (last == ';' || last == '{' || last == '}') {
+            return true;
+        }
+        // A complete, single-line annotation usage (`@Override`, `@SuppressWarnings("x")`) always
+        // precedes a fresh declaration - never a continuation of a wrapped expression - so it ends
+        // its own unit here just like `;`/`{`/`}` do, instead of forcing the declaration after it to
+        // read as a continuation of the annotation.
+        if (parenBalance == 0 && isAnnotationUsageLine(scan, lineStart, contentEnd)) {
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean isAnnotationUsageLine(LiteralScanner.Scan scan, int lineStart, int contentEnd) {
+        String source = scan.source();
+        int i = lineStart;
+        while (i < contentEnd && Character.isWhitespace(source.charAt(i))) {
+            i++;
+        }
+        if (i >= contentEnd || source.charAt(i) != '@' || scan.isVerbatim(i)) {
+            return false;
+        }
+        int after = i + 1;
+        int interfaceEnd = after + "interface".length();
+        if (source.regionMatches(after, "interface", 0, "interface".length())
+            && (interfaceEnd >= contentEnd || !Character.isJavaIdentifierPart(source.charAt(interfaceEnd)))) {
+            return false;
+        }
+        return true;
     }
 }

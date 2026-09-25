@@ -1,4 +1,4 @@
-package org.tiger.java.code.formater;
+package org.tiger.java.code.formatter;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -105,7 +105,7 @@ public class JavaCodeFomatter {
     }
 
     private static void printUsage(PrintStream out) {
-        out.println("Usage: java -m org.tiger.code.fomatter [-w|--write] <file.java> [<file.java>...]");
+        out.println("Usage: java -m org.tiger.java.code.formatter [-w|--write] <file.java> [<file.java>...]");
         out.println("Reads " + FormatterConfig.FILE_NAME + " from the current directory if present.");
     }
 }

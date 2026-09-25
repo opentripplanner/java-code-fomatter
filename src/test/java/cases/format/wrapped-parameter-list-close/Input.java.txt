@@ -1,0 +1,11 @@
+package sample;
+
+public class Ctor {
+public Ctor(
+int a,
+int b,
+int c
+) {
+this.a = a;
+}
+}

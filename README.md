@@ -17,9 +17,9 @@ annotations - see [Known limitations](#known-limitations).
 ## Usage
 
 ```bash
-java -m org.tiger.code.fomatter <file.java> [<file.java>...]         # print formatted output to stdout
-java -m org.tiger.code.fomatter -w <file.java> [<file.java>...]       # rewrite files in place
-java -m org.tiger.code.fomatter --write <file.java> [<file.java>...]
+java -m org.tiger.java.code.formatter <file.java> [<file.java>...]         # print formatted output to stdout
+java -m org.tiger.java.code.formatter -w <file.java> [<file.java>...]       # rewrite files in place
+java -m org.tiger.java.code.formatter --write <file.java> [<file.java>...]
 ```
 
 The formatter first validates that a file is syntactically correct Java
@@ -76,16 +76,17 @@ java build/jenesis/Make.java pin          # resolve and record dependency checks
 
 ## Testing
 
-Tests live in `src/test/`, wired as a Jenesis `@jenesis.test` module against
-JUnit 5. `FormatterGoldenFileTest` is a single data-driven test over every
-`src/test/resources/format-cases/<name>/{Input.java.txt,Expected.java.txt}`
+Tests live in `src/test/java/`, wired as a Jenesis `@jenesis.test` module
+against JUnit 5. `FormatterGoldenFileTest` is a single data-driven test over
+every
+`src/test/java/resources/format-cases/<name>/{Input.java.txt,Expected.java.txt}`
 pair: growing coverage is adding a fixture directory, not writing code. Each
 case also gets a free idempotency check - formatting `Expected.java.txt` again
 must be a no-op. Fixtures use a `.java.txt` extension rather than `.java`,
-since Jenesis compiles any `.java` file under `src/test` as real source.
+since Jenesis compiles any `.java` file under `src/test/java` as real source.
 
-All cases share `src/test/resources/.jcf.properties` (`wrapAtColumn=60`), the
-same file format and loading path as a real `.jcf.properties` - a narrower
+All cases share `src/test/java/resources/.jcf.properties` (`wrapAtColumn=60`),
+the same file format and loading path as a real `.jcf.properties` - a narrower
 column budget keeps fixtures short and readable.
 
 `java build/jenesis/Make.java` compiles, tests, and packages both modules, so
@@ -120,8 +121,11 @@ Deliberately narrow. In particular:
   (`a.stream()` never stays glued to the receiver); an opt-in to keep it
   glued is designed but not implemented yet.
 - `switch` case bodies aren't given special per-case indentation.
-- Multi-line comment interior lines are left verbatim even if originally
-  misindented.
+- A multi-line comment's interior lines keep their indentation *relative to*
+  the comment's own opening line (so a javadoc's conventional `" * "`
+  alignment survives a depth change) rather than being reindented from
+  scratch - a comment that was already misindented relative to its own
+  opener stays that way, just shifted.
 - Column width is measured as `String.length()` (UTF-16 units), not display
   width.
 

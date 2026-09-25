@@ -1,4 +1,4 @@
-package org.tiger.java.code.formater.test;
+package code.formatter.test;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,8 +20,8 @@ import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.tiger.java.code.formater.FormatterConfig;
-import org.tiger.java.code.formater.SourceFormatter;
+import org.tiger.java.code.formatter.FormatterConfig;
+import org.tiger.java.code.formatter.SourceFormatter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -49,7 +49,7 @@ class FormatterGoldenFileTest {
     private static final FormatterConfig CONFIG = loadConfig();
 
     private static FormatterConfig loadConfig() {
-        String path = "/resources/.jcf.properties";
+        String path = "/cases/.jcf.properties";
         try (InputStream in = FormatterGoldenFileTest.class.getResourceAsStream(path)) {
             Objects.requireNonNull(in, path + " resource not found on the test classpath");
             Properties properties = new Properties();
@@ -68,7 +68,7 @@ class FormatterGoldenFileTest {
     }
 
     static List<FormatCase> cases() throws IOException, URISyntaxException {
-        URL root = FormatterGoldenFileTest.class.getResource("/resources/format-cases");
+        URL root = FormatterGoldenFileTest.class.getResource("/cases/format");
         Objects.requireNonNull(root, "format-cases resource directory not found on the test classpath");
         // Test resources may be an exploded directory or packaged into a jar (as Jenesis does when
         // running the suite), so the root's path may need a filesystem opened for it first.
@@ -115,7 +115,7 @@ class FormatterGoldenFileTest {
 
     @Test
     void leavesUnwrappableTextBlockLineUntouched() throws IOException {
-        String path = "/resources/edge-cases/LongTextBlock.java.txt";
+        String path = "/cases/edge/LongTextBlock.java.txt";
         try (InputStream in = FormatterGoldenFileTest.class.getResourceAsStream(path)) {
             Objects.requireNonNull(in, path + " resource not found on the test classpath");
             String source = new String(in.readAllBytes(), StandardCharsets.UTF_8);

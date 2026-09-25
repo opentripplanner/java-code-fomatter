@@ -1,4 +1,4 @@
-package org.tiger.java.code.formater;
+package org.tiger.java.code.formatter;
 
 import java.util.ArrayList;
 import java.util.List;

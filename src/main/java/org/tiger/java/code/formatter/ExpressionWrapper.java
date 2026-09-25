@@ -1,4 +1,4 @@
-package org.tiger.java.code.formater;
+package org.tiger.java.code.formatter;
 
 import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.BinaryTree;
@@ -127,9 +127,16 @@ final class ExpressionWrapper {
             super.visitVariable(node, unused);
             ExpressionTree initializer = node.getInitializer();
             if (initializer != null && !isMultiDeclarator(node)) {
+                // An enum constant is a VariableTree too, with a synthetic initializer (the
+                // implicit constructor call) positioned at the constant itself rather than after a
+                // real '=' - not a declaration this wrapper's `<type> <name> = <expr>` model
+                // applies to.
                 String prefix = ctx.source().substring(ctx.start(node), ctx.start(initializer));
-                String declaratorText = prefix.substring(0, prefix.lastIndexOf('=')).stripTrailing();
-                tryWrapDeclarator(declaratorText, node, initializer, ctx, edits);
+                int equals = prefix.lastIndexOf('=');
+                if (equals >= 0) {
+                    String declaratorText = prefix.substring(0, equals).stripTrailing();
+                    tryWrapDeclarator(declaratorText, node, initializer, ctx, edits);
+                }
             }
             return null;
         }
@@ -398,13 +405,14 @@ final class ExpressionWrapper {
     /**
      * Renders a chain of precedence-tier lists reached by repeatedly drilling into slot 0 (e.g.
      * {@code aaaa & bbbb ^ cccc | dddd} fully expanding). Confirmed via a worked multi-tier bitwise
-     * example that levels number *inside-out*, not top-down: this call's own tier (layer 0) uses
-     * {@code level} directly for its own non-first siblings, exactly like any other list - but each
-     * *nested* layer reached by drilling into slot 0 is numbered from the innermost (shallowest,
-     * {@code level + 1}) outward toward layer 0 (deepest). That can only be known once the full
-     * drill depth is known, so this is two-phase: first walk down collecting one layer per tier
-     * actually drilled through (stopping the moment a layer's slot 0 fits verbatim, or isn't a
-     * further-flattenable binary tree), then render each layer at its now-known level.
+     * example that levels number top-down, outermost to innermost: this call's own tier (layer 0,
+     * the loosest-precedence operator actually being split) uses {@code level} directly for its own
+     * non-first siblings, exactly like any other list, and each *nested* layer reached by drilling
+     * into slot 0 - a tighter-precedence operator, further inside the expression - steps one level
+     * deeper still ({@code level + 1}, {@code level + 2}, ...), same as any other bracket's content.
+     * This is two-phase: first walk down collecting one layer per tier actually drilled through
+     * (stopping the moment a layer's slot 0 fits verbatim, or isn't a further-flattenable binary
+     * tree), then render each layer at its now-known level.
      */
     private static List<String> renderBinaryCascade(BinaryTree top, int columnUsed, int level, Ctx ctx) {
         List<List<OperandSlot>> layers = new ArrayList<>();
@@ -423,13 +431,13 @@ final class ExpressionWrapper {
         }
 
         int layerCount = layers.size();
-        int innermostLevel = layerLevel(layerCount, layerCount - 1, level);
+        int innermostLevel = level + layerCount - 1;
         List<String> core = render(layers.get(layerCount - 1).get(0).operand(), columnUsed, innermostLevel + 1, ctx);
         List<String> out = new ArrayList<>(core);
 
         for (int i = layerCount - 1; i >= 0; i--) {
             List<OperandSlot> slots = layers.get(i);
-            int thisLevel = layerLevel(layerCount, i, level);
+            int thisLevel = level + i;
             int indent = thisLevel * ctx.indentWidth();
             for (int s = 1; s < slots.size(); s++) {
                 OperandSlot slot = slots.get(s);
@@ -440,12 +448,6 @@ final class ExpressionWrapper {
             }
         }
         return out;
-    }
-
-    /** Layer 0 uses {@code level} directly, matching any other list; every layer reached by
-     * drilling into slot 0 beyond that is numbered inside-out from the innermost. */
-    private static int layerLevel(int layerCount, int index, int level) {
-        return index == 0 ? level : level + (layerCount - index);
     }
 
     /** A sole-occupant operand (unary/cast/lambda body): no sibling to disambiguate from, so it reuses {@code level} directly. */
