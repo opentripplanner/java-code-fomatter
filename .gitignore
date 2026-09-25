@@ -4,3 +4,10 @@
 build/
 target/
 out/
+.DS_Store
+*.iml
+.classpath
+.project
+
+
+otp-format
