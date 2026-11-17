@@ -1,0 +1,14 @@
+class A {
+    Object f() {
+        return GraphQLObjectType.newObject()
+            .name("Params")
+            .description("The default parameters")
+            .field(
+                GraphQLFieldDefinition.newFieldDefinition()
+                    .name("walkSpeed")
+                    .description("Max walk speed")
+                    .build()
+            )
+            .build();
+    }
+}

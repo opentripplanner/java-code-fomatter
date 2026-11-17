@@ -519,8 +519,31 @@ final class ExpressionWrapper {
         List<String> receiver = render(head.tree(), columnUsed, level, ctx);
         List<String> out = new ArrayList<>(receiver);
 
-        int indent = level * ctx.indentWidth();
-        for (int i = 1; i < segments.size(); i++) {
+        // The chain's dots sit at `level`; the line its head is on is one level shallower.
+        int dotLevel = level;
+        int indent = dotLevel * ctx.indentWidth();
+        int first = 1;
+        String headText = ctx.text(head.tree());
+        if (receiver.size() == 1 && isFactoryHead(headText, ctx.indentWidth())) {
+            // `Type.factory(...)` / short receivers keep their first call on the head's line.
+            Segment.Dot dot = (Segment.Dot) segments.get(1);
+            int identifierStart = ctx.end(dot.select()) - dot.name().length();
+            String verbatimSegment = "." + ctx.source().substring(identifierStart, ctx.end(dot.call()));
+            int col = columnUsed + headText.length();
+            List<String> call;
+            if (col + verbatimSegment.length() <= ctx.wrapAtColumn()) {
+                call = List.of(verbatimSegment);
+            } else {
+                List<String> rendered = renderCall(dot.name(), dot.call().getArguments(), col, level - 1, ctx);
+                call = new ArrayList<>();
+                call.add("." + rendered.get(0));
+                call.addAll(rendered.subList(1, rendered.size()));
+            }
+            out.set(0, out.get(0) + call.get(0));
+            out.addAll(call.subList(1, call.size()));
+            first = 2;
+        }
+        for (int i = first; i < segments.size(); i++) {
             Segment.Dot dot = (Segment.Dot) segments.get(i);
             int identifierStart = ctx.end(dot.select()) - dot.name().length();
             String verbatimSegment = "." + ctx.source().substring(identifierStart, ctx.end(dot.call()));
@@ -528,7 +551,7 @@ final class ExpressionWrapper {
             if (indent + verbatimSegment.length() <= ctx.wrapAtColumn()) {
                 call = List.of(verbatimSegment);
             } else {
-                List<String> rendered = renderCall(dot.name(), dot.call().getArguments(), indent, level, ctx);
+                List<String> rendered = renderCall(dot.name(), dot.call().getArguments(), indent, dotLevel, ctx);
                 call = new ArrayList<>();
                 call.add("." + rendered.get(0));
                 call.addAll(rendered.subList(1, rendered.size()));
@@ -537,6 +560,14 @@ final class ExpressionWrapper {
             out.addAll(call.subList(1, call.size()));
         }
         return out;
+    }
+
+    /** A plain identifier that's capitalised (a type name, so `Type.factory()`) or no longer than an indent step. */
+    private static boolean isFactoryHead(String text, int indentWidth) {
+        if (!text.matches("[A-Za-z_$][A-Za-z0-9_$]*")) {
+            return false;
+        }
+        return Character.isUpperCase(text.charAt(0)) || text.length() <= indentWidth;
     }
 
     /** Collects `[receiver, .seg1, .seg2, ...]` by walking the method-select chain outer-to-inner, then reversing. */
@@ -578,7 +609,11 @@ final class ExpressionWrapper {
             // A sole argument reuses argLevel directly for its own further splitting (matches the
             // confirmed `.foo(xIsLong + cIsLong)` example); 2+ arguments are genuine siblings, so
             // each one's own overflow steps deeper still, same as renderBinaryCascade's slot recursion.
-            int childLevel = args.size() == 1 ? argLevel : argLevel + 1;
+            // A sole argument that is itself a multi-segment chain also steps deeper, so its dots
+            // sit one level under its head instead of level with it.
+            boolean soleChain = args.size() == 1 && args.get(0) instanceof MethodInvocationTree inner
+                && collectChain(inner).size() > 1;
+            int childLevel = args.size() == 1 && !soleChain ? argLevel : argLevel + 1;
             String suffix = i < args.size() - 1 ? "," : "";
             List<String> rendered = render(args.get(i), indent, childLevel, suffix.isEmpty() ? ctx : ctx.reserving(1));
             out.add(" ".repeat(indent) + rendered.get(0));
