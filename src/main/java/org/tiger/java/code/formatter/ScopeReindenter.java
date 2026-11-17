@@ -32,12 +32,31 @@ final class ScopeReindenter {
     private ScopeReindenter() {
     }
 
+    /**
+     * One open {@code {}: {@code openerDepth} is the display depth of the line that opened it (and so
+     * of the line that closes it); its body sits one level deeper. Tracking this per brace, instead
+     * of a bare depth counter, is what lets an anonymous class or lambda opened on a continuation
+     * line (e.g. {@code return\n  new Foo() \{}) keep its body and closer relative to that line.
+     */
+    private record Frame(int openerDepth, boolean isEnum, boolean isCase) {
+    }
+
+    private static final java.util.regex.Pattern ENUM_WORD = java.util.regex.Pattern.compile("\\benum\\b");
+    private static final java.util.regex.Pattern ANON_OR_LAMBDA =
+        java.util.regex.Pattern.compile("\\bnew\\b|->");
+
+    private static int bodyDepth(java.util.ArrayDeque<Frame> stack) {
+        return stack.isEmpty() ? 0 : stack.peek().openerDepth() + 1;
+    }
+
     static String reindent(String source, int indentWidth) {
         LiteralScanner.Scan scan = LiteralScanner.scan(source);
         StringBuilder out = new StringBuilder(source.length());
-        int depth = 0;
+        java.util.ArrayDeque<Frame> stack = new java.util.ArrayDeque<>();
+        int parenDepth = 0;
         boolean previousEndsStatement = true;
         boolean previousNetBracesZero = true;
+        char previousLast = 0;
         int blockCommentOriginalIndent = 0;
         int blockCommentNewIndent = 0;
         int n = source.length();
@@ -60,6 +79,16 @@ final class ScopeReindenter {
                 // continuation tracking, same as a comment-only line.
             } else {
                 int firstNonWs = lineStart + (rawLine.length() - trimmed.length());
+                boolean isCaseLabel = isCaseLabelLine(scan, trimmed, firstNonWs, contentEnd);
+                // A new `case`/`default:` label, or a closing '}', implicitly ends the previous
+                // label's (brace-less) body scope.
+                if (!stack.isEmpty() && stack.peek().isCase()
+                    && (isCaseLabel || countLeadingCloses(scan, lineStart, contentEnd) > 0)) {
+                    stack.pop();
+                }
+                int depth = bodyDepth(stack);
+                int lineDisplayDepth = depth;
+                boolean lineIsContinuation = false;
                 LiteralScanner.Kind firstKind = scan.kindAt(firstNonWs);
                 if (firstKind == LiteralScanner.Kind.TEXT_BLOCK) {
                     out.append(rawLine);
@@ -81,8 +110,13 @@ final class ScopeReindenter {
                     // already opened a still-unclosed brace of its own (e.g. an array initializer's
                     // '{' straddling the wrap point) - that case already deepens `depth` on its own,
                     // so adding a continuation bonus on top of it would double-count the nesting.
-                    boolean isContinuation = !previousEndsStatement && previousNetBracesZero;
                     int leadingCloses = countLeadingCloses(scan, lineStart, contentEnd);
+                    // A line leading with '}' closes a scope, so it is never a continuation.
+                    // Likewise a line leading with '{' (a brace on its own line after a wrapped
+                    // class/method header) opens a scope at the header's own depth.
+                    boolean isContinuation = !previousEndsStatement && previousNetBracesZero
+                        && leadingCloses == 0 && !(trimmed.startsWith("{") && previousLast != '=');
+                    lineIsContinuation = isContinuation;
                     int baseDepth;
                     if (isContinuation) {
                         // Never *decrease* a continuation line's depth below what it already had:
@@ -97,12 +131,29 @@ final class ScopeReindenter {
                         // to the depth of whatever it's closing rather than drilling one deeper.
                         int existingIndent = rawLine.length() - trimmed.length();
                         int preExistingDepth = existingIndent / indentWidth + leadingCloses;
-                        int freshBonus = trimmed.startsWith(")") ? depth : depth + 1;
+                        int freshBonus = startsWithCloser(trimmed) ? depth : depth + 1;
                         baseDepth = Math.max(freshBonus, preExistingDepth);
                     } else {
                         baseDepth = depth;
                     }
-                    int displayDepth = Math.max(0, baseDepth - leadingCloses);
+                    int displayDepth;
+                    if (leadingCloses > 0) {
+                        // A closer returns to the display depth of the line that opened the scope.
+                        displayDepth = 0;
+                        int k = 0;
+                        for (Frame f : stack) {
+                            if (f.isCase()) {
+                                continue;
+                            }
+                            if (++k == leadingCloses) {
+                                displayDepth = f.openerDepth();
+                                break;
+                            }
+                        }
+                    } else {
+                        displayDepth = baseDepth;
+                    }
+                    lineDisplayDepth = displayDepth;
                     if (firstKind == LiteralScanner.Kind.BLOCK_COMMENT) {
                         blockCommentOriginalIndent = rawLine.length() - trimmed.length();
                         blockCommentNewIndent = displayDepth * indentWidth;
@@ -110,13 +161,23 @@ final class ScopeReindenter {
                     out.append(" ".repeat(displayDepth * indentWidth));
                     out.append(trimmed);
                 }
-                int netBraces = countNetBraces(scan, lineStart, contentEnd);
-                depth += netBraces;
-                depth = Math.max(0, depth);
-                Boolean endsStatement = classifyLineEnd(scan, lineStart, contentEnd);
+                int netBraces = applyBraces(scan, lineStart, contentEnd, stack, lineDisplayDepth,
+                    lineIsContinuation);
+                if (isCaseLabel) {
+                    // Statements after `case X:` / `default:` sit one level deeper, until the next
+                    // label or the switch's closing brace.
+                    stack.push(new Frame(lineDisplayDepth, false, true));
+                }
+                parenDepth = Math.max(0, parenDepth + countNetParens(scan, lineStart, contentEnd));
+                boolean enumConstantContext = parenDepth == 0 && !stack.isEmpty() && stack.peek().isEnum();
+                Boolean endsStatement = classifyLineEnd(scan, lineStart, contentEnd, enumConstantContext);
+                if (isCaseLabel) {
+                    endsStatement = Boolean.TRUE;
+                }
                 if (endsStatement != null) {
                     previousEndsStatement = endsStatement;
                     previousNetBracesZero = netBraces == 0;
+                    previousLast = lastCodeChar(scan, lineStart, contentEnd);
                 }
             }
 
@@ -128,6 +189,56 @@ final class ScopeReindenter {
             }
         }
         return out.toString();
+    }
+
+    /** Whether the line is an old-style {@code case X:} / {@code default:} switch label. */
+    private static boolean isCaseLabelLine(LiteralScanner.Scan scan, String trimmed, int firstNonWs,
+        int contentEnd) {
+        if (scan.isVerbatim(firstNonWs)) {
+            return false;
+        }
+        if (!startsWithWord(trimmed, "case") && !startsWithWord(trimmed, "default")) {
+            return false;
+        }
+        return lastCodeChar(scan, firstNonWs, contentEnd) == ':';
+    }
+
+    private static boolean startsWithWord(String text, String word) {
+        return text.startsWith(word)
+            && (text.length() == word.length() || !Character.isJavaIdentifierPart(text.charAt(word.length())));
+    }
+
+    /** The last non-whitespace, non-comment character of a line, or 0 if it has none. */
+    private static char lastCodeChar(LiteralScanner.Scan scan, int lineStart, int contentEnd) {
+        String source = scan.source();
+        char last = 0;
+        for (int i = lineStart; i < contentEnd; i++) {
+            LiteralScanner.Kind kind = scan.kindAt(i);
+            if (kind == LiteralScanner.Kind.LINE_COMMENT) {
+                break;
+            }
+            if (kind == LiteralScanner.Kind.BLOCK_COMMENT) {
+                i = scan.spanAt(i).end() - 1;
+                continue;
+            }
+            if (!Character.isWhitespace(source.charAt(i))) {
+                last = source.charAt(i);
+            }
+        }
+        return last;
+    }
+
+    /**
+     * Whether a continuation line leads with a closing {@code )} or a generic-closing {@code >}
+     * (not {@code >>}, {@code >=} or {@code >>>} operators), which by convention returns to the
+     * depth of whatever it closes.
+     */
+    private static boolean startsWithCloser(String trimmed) {
+        if (trimmed.startsWith(")")) {
+            return true;
+        }
+        return trimmed.startsWith(">")
+            && (trimmed.length() == 1 || (trimmed.charAt(1) != '>' && trimmed.charAt(1) != '='));
     }
 
     /** The number of consecutive, non-verbatim {@code '}'} characters leading a line's content. */
@@ -145,8 +256,13 @@ final class ScopeReindenter {
         return count;
     }
 
-    /** Net change in brace depth contributed by a line's non-verbatim {@code {}/}}} characters. */
-    private static int countNetBraces(LiteralScanner.Scan scan, int lineStart, int contentEnd) {
+    /**
+     * Pushes/pops {@link Frame}s for the line's non-verbatim braces and returns the net brace
+     * change. A {@code {} normally opens at the current depth; one on a continuation line that
+     * starts an anonymous class or lambda opens at the line's own display depth instead.
+     */
+    private static int applyBraces(LiteralScanner.Scan scan, int lineStart, int contentEnd,
+        java.util.ArrayDeque<Frame> stack, int lineDisplayDepth, boolean lineIsContinuation) {
         String source = scan.source();
         int net = 0;
         for (int i = lineStart; i < contentEnd; i++) {
@@ -155,8 +271,37 @@ final class ScopeReindenter {
             }
             char c = source.charAt(i);
             if (c == '{') {
+                String prefix = source.substring(lineStart, i);
+                int opener = lineIsContinuation && ANON_OR_LAMBDA.matcher(prefix).find()
+                    ? lineDisplayDepth
+                    : bodyDepth(stack);
+                stack.push(new Frame(opener, ENUM_WORD.matcher(prefix).find(), false));
                 net++;
             } else if (c == '}') {
+                if (!stack.isEmpty() && stack.peek().isCase()) {
+                    stack.pop();
+                }
+                if (!stack.isEmpty()) {
+                    stack.pop();
+                }
+                net--;
+            }
+        }
+        return net;
+    }
+
+    /** Net change in paren depth contributed by a line's non-verbatim parentheses. */
+    private static int countNetParens(LiteralScanner.Scan scan, int lineStart, int contentEnd) {
+        String source = scan.source();
+        int net = 0;
+        for (int i = lineStart; i < contentEnd; i++) {
+            if (scan.isVerbatim(i)) {
+                continue;
+            }
+            char c = source.charAt(i);
+            if (c == '(') {
+                net++;
+            } else if (c == ')') {
                 net--;
             }
         }
@@ -169,7 +314,8 @@ final class ScopeReindenter {
      * and transparent to continuation tracking ({@code null}). Trailing line/block comments don't
      * count as the line's "real" ending.
      */
-    private static Boolean classifyLineEnd(LiteralScanner.Scan scan, int lineStart, int contentEnd) {
+    private static Boolean classifyLineEnd(LiteralScanner.Scan scan, int lineStart, int contentEnd,
+        boolean enumConstantContext) {
         String source = scan.source();
         char last = 0;
         boolean found = false;
@@ -203,6 +349,11 @@ final class ScopeReindenter {
         if (last == ';' || last == '{' || last == '}') {
             return true;
         }
+        // A comma ending a line directly inside an enum body (outside any parentheses) separates
+        // constants: it ends its own unit, so the next constant is not a continuation.
+        if (last == ',' && enumConstantContext) {
+            return true;
+        }
         // A complete, single-line annotation usage (`@Override`, `@SuppressWarnings("x")`) always
         // precedes a fresh declaration - never a continuation of a wrapped expression - so it ends
         // its own unit here just like `;`/`{`/`}` do, instead of forcing the declaration after it to
@@ -213,21 +364,63 @@ final class ScopeReindenter {
         return false;
     }
 
+    /**
+     * Whether the line consists solely of one or more annotation usages ({@code @Override},
+     * {@code @SuppressWarnings("x")}). A line like {@code @Nullable Foo foo,} has a parameter or
+     * declaration after its annotation, so it is not one.
+     */
     private static boolean isAnnotationUsageLine(LiteralScanner.Scan scan, int lineStart, int contentEnd) {
         String source = scan.source();
         int i = lineStart;
-        while (i < contentEnd && Character.isWhitespace(source.charAt(i))) {
-            i++;
+        boolean any = false;
+        while (true) {
+            while (i < contentEnd && Character.isWhitespace(source.charAt(i))) {
+                i++;
+            }
+            if (i >= contentEnd || scan.kindAt(i) == LiteralScanner.Kind.LINE_COMMENT) {
+                return any;
+            }
+            if (scan.kindAt(i) == LiteralScanner.Kind.BLOCK_COMMENT) {
+                i = scan.spanAt(i).end();
+                continue;
+            }
+            if (source.charAt(i) != '@' || scan.isVerbatim(i)) {
+                return false;
+            }
+            int after = i + 1;
+            int interfaceEnd = after + "interface".length();
+            if (source.regionMatches(after, "interface", 0, "interface".length())
+                && (interfaceEnd >= contentEnd || !Character.isJavaIdentifierPart(source.charAt(interfaceEnd)))) {
+                return false;
+            }
+            i = after;
+            while (i < contentEnd && (Character.isJavaIdentifierPart(source.charAt(i)) || source.charAt(i) == '.')) {
+                i++;
+            }
+            int j = i;
+            while (j < contentEnd && Character.isWhitespace(source.charAt(j))) {
+                j++;
+            }
+            if (j < contentEnd && source.charAt(j) == '(' && !scan.isVerbatim(j)) {
+                int balance = 0;
+                for (; j < contentEnd; j++) {
+                    if (scan.isVerbatim(j)) {
+                        continue;
+                    }
+                    char c = source.charAt(j);
+                    if (c == '(') {
+                        balance++;
+                    } else if (c == ')' && --balance == 0) {
+                        j++;
+                        break;
+                    }
+                }
+                if (balance != 0) {
+                    return false;
+                }
+                i = j;
+            }
+            any = true;
         }
-        if (i >= contentEnd || source.charAt(i) != '@' || scan.isVerbatim(i)) {
-            return false;
-        }
-        int after = i + 1;
-        int interfaceEnd = after + "interface".length();
-        if (source.regionMatches(after, "interface", 0, "interface".length())
-            && (interfaceEnd >= contentEnd || !Character.isJavaIdentifierPart(source.charAt(interfaceEnd)))) {
-            return false;
-        }
-        return true;
     }
 }

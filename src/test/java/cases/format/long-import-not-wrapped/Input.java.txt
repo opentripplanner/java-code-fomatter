@@ -1,0 +1,4 @@
+import static com.example.SomeVeryLongClassNameForTesting.someVeryLongStaticMethodNameForTesting;
+
+class A {
+}

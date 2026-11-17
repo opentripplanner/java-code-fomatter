@@ -1,0 +1,12 @@
+class Foo {
+    Iterator<T> iterator() {
+        return
+            new Iterator<>() {
+        int x;
+
+        public boolean hasNext() {
+            return x > 0;
+        }
+        };
+    }
+}

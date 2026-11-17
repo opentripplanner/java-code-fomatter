@@ -1,0 +1,9 @@
+public enum Topic {
+    /** first */
+    A("a"),
+    /** second */
+    B("b"),
+    C("c",
+        1),
+    D;
+}

@@ -1,0 +1,21 @@
+class A {
+    int f(int x) {
+        switch (x) {
+        case 1:
+            foo();
+            return 1;
+        case 2:
+        case 3:
+            bar();
+            break;
+        default:
+            switch (x) {
+            case 4:
+                baz();
+                break;
+            }
+            return 0;
+        }
+        return -1;
+    }
+}

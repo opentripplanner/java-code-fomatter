@@ -1,0 +1,16 @@
+public final class Foo
+    extends Bar<Foo>
+    {
+    Foo(
+        int a,
+        @Nullable Baz b,
+        @Nullable Qux c
+    ) {
+        this.a = a;
+    }
+
+    BiFunction<
+        Collection<A>,
+        Collection<B>
+    > merger();
+}

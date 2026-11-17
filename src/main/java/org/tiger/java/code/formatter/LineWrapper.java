@@ -50,7 +50,10 @@ final class LineWrapper {
                 contentEnd--;
             }
 
-            if (contentEnd - lineStart <= maxColumns) {
+            String head = source.substring(lineStart, contentEnd).stripLeading();
+            boolean importOrPackage = head.startsWith("import ") || head.startsWith("package ");
+            if (contentEnd - lineStart <= maxColumns || importOrPackage) {
+                // import/package lines are never wrapped (a long one is conventionally exempt).
                 out.append(source, lineStart, contentEnd);
             } else {
                 List<String> fragments = wrapLine(scan, lineStart, contentEnd, bracketDepth, maxColumns, indentWidth);
