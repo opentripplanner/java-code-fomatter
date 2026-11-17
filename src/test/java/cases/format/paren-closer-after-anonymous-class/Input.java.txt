@@ -1,0 +1,12 @@
+class A {
+    static final X Y = X.newX()
+        .name("n")
+        .coercing(
+            new Coercing<String>() {
+                String f() {
+                    return null;
+                }
+            }
+        )
+        .build();
+}

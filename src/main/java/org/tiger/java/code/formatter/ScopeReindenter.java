@@ -53,7 +53,7 @@ final class ScopeReindenter {
         LiteralScanner.Scan scan = LiteralScanner.scan(source);
         StringBuilder out = new StringBuilder(source.length());
         java.util.ArrayDeque<Frame> stack = new java.util.ArrayDeque<>();
-        int parenDepth = 0;
+        java.util.ArrayDeque<Integer> parens = new java.util.ArrayDeque<>();
         boolean previousEndsStatement = true;
         boolean previousNetBracesZero = true;
         char previousLast = 0;
@@ -80,10 +80,16 @@ final class ScopeReindenter {
             } else {
                 int firstNonWs = lineStart + (rawLine.length() - trimmed.length());
                 boolean isCaseLabel = isCaseLabelLine(scan, trimmed, firstNonWs, contentEnd);
+                // A comment-only line right before the next label belongs to that label, so it
+                // sits at the label's depth rather than inside the previous body.
+                boolean commentBeforeLabel = !stack.isEmpty() && stack.peek().isCase()
+                    && (scan.kindAt(firstNonWs) == LiteralScanner.Kind.LINE_COMMENT
+                        || scan.kindAt(firstNonWs) == LiteralScanner.Kind.BLOCK_COMMENT)
+                    && nextCodeLineIsCaseLabel(scan, lineEnd + 1);
                 // A new `case`/`default:` label, or a closing '}', implicitly ends the previous
                 // label's (brace-less) body scope.
                 if (!stack.isEmpty() && stack.peek().isCase()
-                    && (isCaseLabel || countLeadingCloses(scan, lineStart, contentEnd) > 0)) {
+                    && (isCaseLabel || commentBeforeLabel || countLeadingCloses(scan, lineStart, contentEnd) > 0)) {
                     stack.pop();
                 }
                 int depth = bodyDepth(stack);
@@ -153,6 +159,11 @@ final class ScopeReindenter {
                     } else {
                         displayDepth = baseDepth;
                     }
+                    if (trimmed.startsWith(")") && leadingCloses == 0 && !parens.isEmpty()) {
+                        // A closing ')' returns to (at least) the display depth of the line that opened it,
+                        // even when the previous line (e.g. an anonymous class's '}') ended a unit.
+                        displayDepth = Math.max(displayDepth, parens.peek());
+                    }
                     lineDisplayDepth = displayDepth;
                     if (firstKind == LiteralScanner.Kind.BLOCK_COMMENT) {
                         blockCommentOriginalIndent = rawLine.length() - trimmed.length();
@@ -168,8 +179,8 @@ final class ScopeReindenter {
                     // label or the switch's closing brace.
                     stack.push(new Frame(lineDisplayDepth, false, true));
                 }
-                parenDepth = Math.max(0, parenDepth + countNetParens(scan, lineStart, contentEnd));
-                boolean enumConstantContext = parenDepth == 0 && !stack.isEmpty() && stack.peek().isEnum();
+                applyParens(scan, lineStart, contentEnd, parens, lineDisplayDepth);
+                boolean enumConstantContext = parens.isEmpty() && !stack.isEmpty() && stack.peek().isEnum();
                 Boolean endsStatement = classifyLineEnd(scan, lineStart, contentEnd, enumConstantContext);
                 if (isCaseLabel) {
                     endsStatement = Boolean.TRUE;
@@ -290,22 +301,44 @@ final class ScopeReindenter {
         return net;
     }
 
-    /** Net change in paren depth contributed by a line's non-verbatim parentheses. */
-    private static int countNetParens(LiteralScanner.Scan scan, int lineStart, int contentEnd) {
+    /** Pushes the line's display depth for each unmatched '(' and pops one for each ')'. */
+    private static void applyParens(LiteralScanner.Scan scan, int lineStart, int contentEnd,
+        java.util.ArrayDeque<Integer> parens, int lineDisplayDepth) {
         String source = scan.source();
-        int net = 0;
         for (int i = lineStart; i < contentEnd; i++) {
             if (scan.isVerbatim(i)) {
                 continue;
             }
             char c = source.charAt(i);
             if (c == '(') {
-                net++;
-            } else if (c == ')') {
-                net--;
+                parens.push(lineDisplayDepth);
+            } else if (c == ')' && !parens.isEmpty()) {
+                parens.pop();
             }
         }
-        return net;
+    }
+
+    /** Whether the next line holding code (skipping blank and comment-only lines) is a case label. */
+    private static boolean nextCodeLineIsCaseLabel(LiteralScanner.Scan scan, int from) {
+        String source = scan.source();
+        int n = source.length();
+        int lineStart = from;
+        while (lineStart < n) {
+            int newline = source.indexOf('\n', lineStart);
+            int lineEnd = newline == -1 ? n : newline;
+            String trimmed = source.substring(lineStart, lineEnd).strip();
+            if (!trimmed.isEmpty() && !trimmed.startsWith("//") && !trimmed.startsWith("/*")
+                && !trimmed.startsWith("*")) {
+                int firstNonWs = lineStart + (source.substring(lineStart, lineEnd).length()
+                    - source.substring(lineStart, lineEnd).stripLeading().length());
+                return isCaseLabelLine(scan, trimmed, firstNonWs, lineEnd);
+            }
+            if (newline == -1) {
+                return false;
+            }
+            lineStart = newline + 1;
+        }
+        return false;
     }
 
     /**
