@@ -1,0 +1,17 @@
+class A {
+    Object f(String id) {
+        switch (id) {
+            case "a":
+                return 1;
+            case "b": {
+                String x = id;
+                return x;
+            }
+            case "c":
+                return 3;
+            default: {
+                return null;
+            }
+        }
+    }
+}

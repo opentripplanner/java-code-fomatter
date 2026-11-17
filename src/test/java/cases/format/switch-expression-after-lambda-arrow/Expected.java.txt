@@ -1,0 +1,9 @@
+class A {
+    Fetcher f() {
+        return env ->
+            switch (source(env).status()) {
+                case ONE -> Status.ONE;
+                case TWO -> Status.TWO;
+            };
+    }
+}

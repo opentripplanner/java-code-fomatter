@@ -38,7 +38,9 @@ public final class SourceFormatter {
         }
 
         String reindented = ScopeReindenter.reindent(source, config.indent());
-        String expressionWrapped = ExpressionWrapper.wrap(reindented, config);
+        // ExpressionWrapper hands multi-line spans (switch expressions, anonymous-class bodies) off
+        // verbatim, so after it moves their first line they need reindenting again.
+        String expressionWrapped = ScopeReindenter.reindent(ExpressionWrapper.wrap(reindented, config), config.indent());
         LineWrapper.WrapResult wrapped = LineWrapper.wrap(expressionWrapped, config.wrapAtColumn(), config.indent());
 
         SyntaxValidator.ValidationResult revalidated = SyntaxValidator.validate(wrapped.text());

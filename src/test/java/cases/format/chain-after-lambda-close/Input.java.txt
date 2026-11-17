@@ -1,0 +1,11 @@
+class A {
+    List<Object> f() {
+        return list
+            .stream()
+            .map(x -> {
+                return x;
+            })
+            .flatMap(Collection::stream)
+            .toList();
+    }
+}

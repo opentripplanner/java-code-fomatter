@@ -43,7 +43,7 @@ final class ScopeReindenter {
 
     private static final java.util.regex.Pattern ENUM_WORD = java.util.regex.Pattern.compile("\\benum\\b");
     private static final java.util.regex.Pattern ANON_OR_LAMBDA =
-        java.util.regex.Pattern.compile("\\bnew\\b|->");
+        java.util.regex.Pattern.compile("\\bnew\\b|->|\\bswitch\\b");
 
     private static int bodyDepth(java.util.ArrayDeque<Frame> stack) {
         return stack.isEmpty() ? 0 : stack.peek().openerDepth() + 1;
@@ -174,7 +174,7 @@ final class ScopeReindenter {
                 }
                 int netBraces = applyBraces(scan, lineStart, contentEnd, stack, lineDisplayDepth,
                     lineIsContinuation);
-                if (isCaseLabel) {
+                if (isCaseLabel && lastCodeChar(scan, lineStart, contentEnd) == ':') {
                     // Statements after `case X:` / `default:` sit one level deeper, until the next
                     // label or the switch's closing brace.
                     stack.push(new Frame(lineDisplayDepth, false, true));
@@ -187,7 +187,7 @@ final class ScopeReindenter {
                 }
                 if (endsStatement != null) {
                     previousEndsStatement = endsStatement;
-                    previousNetBracesZero = netBraces == 0;
+                    previousNetBracesZero = netBraces <= 0;
                     previousLast = lastCodeChar(scan, lineStart, contentEnd);
                 }
             }
@@ -211,7 +211,28 @@ final class ScopeReindenter {
         if (!startsWithWord(trimmed, "case") && !startsWithWord(trimmed, "default")) {
             return false;
         }
-        return lastCodeChar(scan, firstNonWs, contentEnd) == ':';
+        char last = lastCodeChar(scan, firstNonWs, contentEnd);
+        if (last == ':') {
+            return true;
+        }
+        // `case X: {` - a label whose body is a braced block.
+        return last == '{' && endsWithColonBeforeBrace(scan, firstNonWs, contentEnd);
+    }
+
+    private static boolean endsWithColonBeforeBrace(LiteralScanner.Scan scan, int start, int contentEnd) {
+        String source = scan.source();
+        int i = contentEnd - 1;
+        while (i >= start && (Character.isWhitespace(source.charAt(i)) || scan.isVerbatim(i))) {
+            i--;
+        }
+        if (i < start || source.charAt(i) != '{') {
+            return false;
+        }
+        i--;
+        while (i >= start && Character.isWhitespace(source.charAt(i))) {
+            i--;
+        }
+        return i > start && source.charAt(i) == ':' && source.charAt(i - 1) != ':';
     }
 
     private static boolean startsWithWord(String text, String word) {
