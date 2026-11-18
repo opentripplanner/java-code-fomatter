@@ -1,0 +1,21 @@
+class A {
+    void f() {
+        for (
+            Source source :
+                dataSources.getOsmConfiguredDataSource()
+        ) {
+            run();
+        }
+        for (
+            ConfiguredDataSource<OsmExtractParameters> osmSource :
+                dataSources.getOsmConfiguredDataSource()
+        ) {
+            run();
+        }
+        for (
+            Source sourceOne : repository.getSourcesNowAll()
+        ) {
+            run();
+        }
+    }
+}

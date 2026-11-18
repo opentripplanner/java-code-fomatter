@@ -1,0 +1,25 @@
+class A {
+    void f() {
+        if (
+            firstConditionIsLong && secondConditionIsLong
+            || thirdConditionIsLong
+        ) {
+            run();
+        } else if (
+            anotherConditionIsLong
+            && yetAnotherConditionIsLong
+            && more
+        ) {
+            run();
+        }
+        while (
+            firstConditionIsLong && secondConditionIsLong
+            || thirdConditionIsLong
+        ) {
+            run();
+        }
+        if (short1) {
+            run();
+        }
+    }
+}

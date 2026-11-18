@@ -4,8 +4,11 @@ import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.BinaryTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.ConditionalExpressionTree;
+import com.sun.source.tree.EnhancedForLoopTree;
 import com.sun.source.tree.ExpressionStatementTree;
 import com.sun.source.tree.ExpressionTree;
+import com.sun.source.tree.ForLoopTree;
+import com.sun.source.tree.IfTree;
 import com.sun.source.tree.LambdaExpressionTree;
 import com.sun.source.tree.MemberSelectTree;
 import com.sun.source.tree.MethodInvocationTree;
@@ -16,6 +19,7 @@ import com.sun.source.tree.Tree;
 import com.sun.source.tree.TypeCastTree;
 import com.sun.source.tree.UnaryTree;
 import com.sun.source.tree.VariableTree;
+import com.sun.source.tree.WhileLoopTree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreeScanner;
 import java.io.IOException;
@@ -151,6 +155,40 @@ final class ExpressionWrapper {
         }
 
         @Override
+        public Void visitIf(IfTree node, Void unused) {
+            super.visitIf(node, unused);
+            tryWrapConditionHeader(node, node.getCondition(), ctx, edits);
+            return null;
+        }
+
+        @Override
+        public Void visitWhileLoop(WhileLoopTree node, Void unused) {
+            super.visitWhileLoop(node, unused);
+            tryWrapConditionHeader(node, node.getCondition(), ctx, edits);
+            return null;
+        }
+
+        @Override
+        public Void visitEnhancedForLoop(EnhancedForLoopTree node, Void unused) {
+            super.visitEnhancedForLoop(node, unused);
+            tryWrapForEachHeader(node, ctx, edits);
+            return null;
+        }
+
+        @Override
+        public Void visitForLoop(ForLoopTree node, Void unused) {
+            // Not super.visitForLoop: the header's own init/update clauses must not be treated as
+            // declaration/assignment statements (their edits would overlap the header rewrite).
+            scan(node.getCondition(), unused);
+            for (Tree update : node.getUpdate()) {
+                scan(update instanceof ExpressionStatementTree es ? es.getExpression() : update, unused);
+            }
+            scan(node.getStatement(), unused);
+            tryWrapForHeader(node, ctx, edits);
+            return null;
+        }
+
+        @Override
         public Void visitReturn(ReturnTree node, Void unused) {
             super.visitReturn(node, unused);
             if (node.getExpression() != null) {
@@ -266,6 +304,131 @@ final class ExpressionWrapper {
         }
         replacement.append(';');
         edits.add(new Edit(ownerStart, stmtEnd + 1, replacement.toString()));
+    }
+
+    // ---- control-flow headers: if / while / for ----
+
+    /**
+     * `if (cond) {` / `while (cond) {` whose header line is over budget becomes
+     * {@code if (\n    cond\n) {}: the contents one level deeper, the closer back at the
+     * statement's own level - the same bracket shape as a call's argument list.
+     */
+    private static void tryWrapConditionHeader(Tree owner, ExpressionTree condition, Ctx ctx, List<Edit> edits) {
+        if (!(condition instanceof ParenthesizedTree paren)) {
+            return;
+        }
+        int open = ctx.start(paren);
+        int close = ctx.end(paren) - 1;
+        tryWrapHeader(ctx.start(owner), open, close, ctx, edits, level -> {
+            int indent = (level + 1) * ctx.indentWidth();
+            return indented(render(paren.getExpression(), indent, level + 1, ctx), indent);
+        });
+    }
+
+    /** `for (Type v : expr) {`: the whole `Type v : expr` on one line if it fits one level in,
+     * else `Type v :` followed by the iterated expression one level deeper still. */
+    private static void tryWrapForEachHeader(EnhancedForLoopTree node, Ctx ctx, List<Edit> edits) {
+        int ownerStart = ctx.start(node);
+        int open = ctx.source().indexOf('(', ownerStart);
+        int close = headerClose(ctx, node.getStatement());
+        if (open < 0 || close < open) {
+            return;
+        }
+        tryWrapHeader(ownerStart, open, close, ctx, edits, level -> {
+            int indent = (level + 1) * ctx.indentWidth();
+            String declaration = ctx.text(node.getVariable());
+            String expression = ctx.text(node.getExpression());
+            if (expression.indexOf('\n') < 0 && indent + declaration.length() + 3 + expression.length() <= ctx.wrapAtColumn()) {
+                return List.of(" ".repeat(indent) + declaration + " : " + expression);
+            }
+            int innerIndent = (level + 2) * ctx.indentWidth();
+            List<String> lines = new ArrayList<>();
+            lines.add(" ".repeat(indent) + declaration + " :");
+            lines.addAll(indented(render(node.getExpression(), innerIndent, level + 2, ctx), innerIndent));
+            return lines;
+        });
+    }
+
+    /** `for (init; cond; update) {`: each clause on its own line, `;` trailing the first two. */
+    private static void tryWrapForHeader(ForLoopTree node, Ctx ctx, List<Edit> edits) {
+        if (node.getInitializer().size() != 1 || node.getCondition() == null || node.getUpdate().size() != 1) {
+            return;
+        }
+        int ownerStart = ctx.start(node);
+        int open = ctx.source().indexOf('(', ownerStart);
+        int close = headerClose(ctx, node.getStatement());
+        if (open < 0 || close < open) {
+            return;
+        }
+        tryWrapHeader(ownerStart, open, close, ctx, edits, level -> {
+            int indent = (level + 1) * ctx.indentWidth();
+            List<String> lines = new ArrayList<>();
+            lines.add(" ".repeat(indent) + ctx.text(node.getInitializer().get(0)) + ";");
+            List<String> condition = indented(render(node.getCondition(), indent, level + 1, ctx), indent);
+            lines.addAll(condition);
+            lines.set(lines.size() - 1, lines.get(lines.size() - 1) + ";");
+            Tree update = node.getUpdate().get(0);
+            ExpressionTree updateExpression = update instanceof ExpressionStatementTree es ? es.getExpression() : null;
+            if (updateExpression == null) {
+                lines.add(" ".repeat(indent) + ctx.text(update));
+            } else {
+                lines.addAll(indented(render(updateExpression, indent, level + 1, ctx), indent));
+            }
+            return lines;
+        });
+    }
+
+    /** The offset of the {@code ')'} closing a `for`/`while` header: the last one before the body. */
+    private static int headerClose(Ctx ctx, Tree body) {
+        int i = ctx.start(body) - 1;
+        while (i >= 0 && Character.isWhitespace(ctx.source().charAt(i))) {
+            i--;
+        }
+        return i >= 0 && ctx.source().charAt(i) == ')' ? i : -1;
+    }
+
+    /** Prefixes the first rendered line with {@code indent} spaces (later lines carry their own). */
+    private static List<String> indented(List<String> rendered, int indent) {
+        List<String> out = new ArrayList<>(rendered);
+        out.set(0, " ".repeat(indent) + out.get(0));
+        return out;
+    }
+
+    /**
+     * Rewrites the header's parenthesised part {@code ( ... )} (offsets {@code open}..{@code close}
+     * inclusive) as {@code (\n<content>\n<level indent>)} when the line holding it is over
+     * budget and the rewrite actually shortens the worst line.
+     */
+    private static void tryWrapHeader(int ownerStart, int open, int close, Ctx ctx, List<Edit> edits,
+        java.util.function.IntFunction<List<String>> content) {
+        String source = ctx.source();
+        int lineStart = lineStartOf(source, ownerStart);
+        int lastLineEnd = lineEndOf(source, close);
+        if (!anyLineExceedsBudget(ctx, lineStart, lastLineEnd)) {
+            return;
+        }
+        int level = 0;
+        while (lineStart + level * ctx.indentWidth() < source.length()
+            && source.startsWith(" ".repeat(ctx.indentWidth()), lineStart + level * ctx.indentWidth())) {
+            level++;
+        }
+        List<String> lines = content.apply(level);
+
+        int worst = open + 1 - lineStart;
+        for (String line : lines) {
+            worst = Math.max(worst, line.length());
+        }
+        worst = Math.max(worst, level * ctx.indentWidth() + 1 + (lastLineEnd - (close + 1)));
+        if (worst >= maxLineWidth(ctx, lineStart, lastLineEnd)) {
+            return;
+        }
+
+        StringBuilder replacement = new StringBuilder("(");
+        for (String line : lines) {
+            replacement.append('\n').append(line);
+        }
+        replacement.append('\n').append(" ".repeat(level * ctx.indentWidth())).append(')');
+        edits.add(new Edit(open, close + 1, replacement.toString()));
     }
 
     /** Whether `expr`'s own top construct always glues to whatever precedes it (never isolated alone). */

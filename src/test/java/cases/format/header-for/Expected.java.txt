@@ -1,0 +1,11 @@
+class A {
+    void f() {
+        for (
+            int indexOfElement = 0;
+            indexOfElement < elements.size() && keepGoing;
+            indexOfElement++
+        ) {
+            run();
+        }
+    }
+}

@@ -187,6 +187,13 @@ final class ScopeReindenter {
                 if (isCaseLabel) {
                     endsStatement = Boolean.TRUE;
                 }
+                // A ';' inside a parenthesis opened since the enclosing brace (a `for (init; cond;
+                // update)` header) separates clauses; it does not end a statement.
+                int parenBase = stack.isEmpty() ? 0 : stack.peek().parenBase();
+                if (Boolean.TRUE.equals(endsStatement) && parens.size() > parenBase
+                    && lastCodeChar(scan, lineStart, contentEnd) == ';') {
+                    endsStatement = Boolean.FALSE;
+                }
                 // The ')' closing a multi-line annotation's argument list ends the annotation, so
                 // the declaration after it isn't read as continuing it.
                 if (closedAnnotation && parens.isEmpty() && lastCodeChar(scan, lineStart, contentEnd) == ')') {
