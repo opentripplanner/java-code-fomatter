@@ -2,6 +2,7 @@ package org.tiger.java.code.formatter;
 
 import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.BinaryTree;
+import com.sun.source.tree.CaseTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.ConditionalExpressionTree;
 import com.sun.source.tree.EnhancedForLoopTree;
@@ -122,6 +123,8 @@ final class ExpressionWrapper {
     private static final class CandidateScanner extends TreeScanner<Void, Void> {
         private final Ctx ctx;
         private final List<Edit> edits;
+        /** `throw` statements that are a `case ... -> throw ...;` body: the arm rewrite owns them. */
+        private final java.util.Set<Tree> armThrows = new java.util.HashSet<>();
 
         CandidateScanner(Ctx ctx, List<Edit> edits) {
             this.ctx = ctx;
@@ -153,6 +156,16 @@ final class ExpressionWrapper {
             if (node.getExpression() instanceof AssignmentTree assignment) {
                 tryWrapDeclarator(ctx.text(assignment.getVariable()), assignment, assignment.getExpression(), ctx, edits);
             }
+            return null;
+        }
+
+        @Override
+        public Void visitCase(CaseTree node, Void unused) {
+            if (node.getCaseKind() == CaseTree.CaseKind.RULE && node.getBody() instanceof ThrowTree t) {
+                armThrows.add(t);
+            }
+            super.visitCase(node, unused);
+            tryWrapCaseArrow(node, ctx, edits);
             return null;
         }
 
@@ -202,7 +215,9 @@ final class ExpressionWrapper {
         @Override
         public Void visitThrow(ThrowTree node, Void unused) {
             super.visitThrow(node, unused);
-            tryWrapKeyword("throw", node, node.getExpression(), ctx, edits);
+            if (!armThrows.contains(node)) {
+                tryWrapKeyword("throw", node, node.getExpression(), ctx, edits);
+            }
             return null;
         }
 
@@ -316,6 +331,141 @@ final class ExpressionWrapper {
         }
         replacement.append(';');
         edits.add(new Edit(ownerStart, stmtEnd + 1, replacement.toString()));
+    }
+
+    // ---- switch arms: case X -> body ----
+
+    /**
+     * A `case ... -> body` arm with any line over budget puts {@code ->} at the start of its own
+     * line, one level deeper than the last label line, and the body continues from it. Block bodies
+     * are left alone (the arrow is part of the opener and there is nothing to wrap). The move is
+     * made even when the body is an atomic literal that still won't fit: it shortens the label
+     * line and makes the over-long body stand out on its own.
+     */
+    private static void tryWrapCaseArrow(CaseTree node, Ctx ctx, List<Edit> edits) {
+        if (node.getCaseKind() != CaseTree.CaseKind.RULE) {
+            return;
+        }
+        Tree body = node.getBody();
+        ExpressionTree expression;
+        boolean isThrow = false;
+        if (body instanceof ExpressionTree e) {
+            expression = e;
+        } else if (body instanceof ThrowTree t) {
+            expression = t.getExpression();
+            isThrow = true;
+        } else {
+            return;
+        }
+        String source = ctx.source();
+        int i = ctx.start(body) - 1;
+        while (i >= 0 && Character.isWhitespace(source.charAt(i))) {
+            i--;
+        }
+        if (i < 1 || source.charAt(i) != '>' || source.charAt(i - 1) != '-') {
+            return;
+        }
+        int replaceStart = i - 1;
+        while (replaceStart > 0 && Character.isWhitespace(source.charAt(replaceStart - 1))) {
+            replaceStart--;
+        }
+        int bodyEnd = ctx.end(body);
+        int lineStart = lineStartOf(source, ctx.start(node));
+        if (containsComment(ctx, replaceStart, bodyEnd)) {
+            return;
+        }
+        // Over the limit: some line is too long, or the arm written on one line would be (an arm
+        // whose labels were already wrapped by hand or by another tool).
+        int caseIndent = ctx.start(node) - lineStart;
+        String collapsed = source.substring(ctx.start(node), bodyEnd)
+            .replaceAll("\\s*\\n\\s*\\.", ".")
+            .replaceAll("\\s*\\n\\s*", " ")
+            .replace("( ", "(")
+            .replace(" )", ")")
+            + (body instanceof ExpressionTree ? ";" : "");
+        boolean oneLineWouldOverflow = caseIndent + collapsed.length() > ctx.wrapAtColumn();
+        if (!oneLineWouldOverflow && !anyLineExceedsBudget(ctx, lineStart, lineEndOf(source, bodyEnd))) {
+            return;
+        }
+
+        int w = ctx.indentWidth();
+        int labelLineStart = lineStartOf(source, replaceStart);
+        int labelIndent = 0;
+        while (labelLineStart + labelIndent < source.length() && source.charAt(labelLineStart + labelIndent) == ' ') {
+            labelIndent++;
+        }
+        int arrowIndent = labelIndent + w;
+        int level = arrowIndent / w + 1;
+        String lead = "-> " + (isThrow ? "throw " : "");
+
+        List<String> rendered;
+        String expressionText = ctx.text(expression);
+        if (expressionText.indexOf('\n') >= 0) {
+            rendered = relayout(expressionText, arrowIndent, w);
+            if (rendered == null) {
+                return;
+            }
+        } else {
+            rendered = render(expression, arrowIndent + lead.length(), level, ctx.reserving(1));
+        }
+
+        StringBuilder replacement = new StringBuilder();
+        replacement.append('\n').append(" ".repeat(arrowIndent)).append(lead).append(rendered.get(0));
+        for (int k = 1; k < rendered.size(); k++) {
+            replacement.append('\n').append(rendered.get(k));
+        }
+        if (isThrow) {
+            replacement.append(';');
+        }
+        edits.add(new Edit(replaceStart, bodyEnd, replacement.toString()));
+    }
+
+    /**
+     * Re-lays out an already multi-line expression relative to {@code baseIndent}: every line
+     * after the first is indented one level per bracket still open at its start (a leading closer
+     * returns to the opener's level). Returns {@code null} for text this simple scheme can't
+     * safely reflow (text blocks).
+     */
+    private static List<String> relayout(String text, int baseIndent, int indentWidth) {
+        if (text.contains("\"\"\"")) {
+            return null;
+        }
+        LiteralScanner.Scan scan = LiteralScanner.scan(text);
+        String[] lines = text.split("\n", -1);
+        List<String> out = new ArrayList<>();
+        int open = 0;
+        int offset = 0;
+        for (int n = 0; n < lines.length; n++) {
+            String trimmed = lines[n].strip();
+            int leadingWs = lines[n].length() - lines[n].stripLeading().length();
+            int closers = 0;
+            while (closers < trimmed.length() && ")]}".indexOf(trimmed.charAt(closers)) >= 0
+                && !scan.isVerbatim(offset + leadingWs + closers)) {
+                closers++;
+            }
+            if (n == 0) {
+                out.add(trimmed);
+            } else {
+                int level = Math.max(0, open - closers);
+                if (level == 0 && closers == 0) {
+                    level = 1; // a continuation outside any bracket (a chain's `.call()`, an operator)
+                }
+                out.add(" ".repeat(baseIndent + level * indentWidth) + trimmed);
+            }
+            for (int k = 0; k < lines[n].length(); k++) {
+                if (scan.isVerbatim(offset + k)) {
+                    continue;
+                }
+                char c = lines[n].charAt(k);
+                if ("([{".indexOf(c) >= 0) {
+                    open++;
+                } else if (")]}".indexOf(c) >= 0) {
+                    open--;
+                }
+            }
+            offset += lines[n].length() + 1;
+        }
+        return out;
     }
 
     // ---- control-flow headers: if / while / for ----

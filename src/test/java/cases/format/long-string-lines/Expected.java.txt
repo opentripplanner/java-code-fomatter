@@ -5,7 +5,8 @@ class A {
 
     String g(Mode mode) {
         return switch (mode) {
-            case BUS -> "A long description string that can never fit on one line.";
+            case BUS
+                -> "A long description string that can never fit on one line.";
             default -> "short";
         };
     }

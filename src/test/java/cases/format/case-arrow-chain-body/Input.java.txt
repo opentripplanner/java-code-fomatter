@@ -1,0 +1,12 @@
+class A {
+    double f(Shape shape) {
+        return switch (shape) {
+            case Line l -> sum(l);
+            case Multi m -> Utils.getLines(m)
+                .stream()
+                .mapToDouble(Utils::sum)
+                .sum();
+            default -> 0;
+        };
+    }
+}
