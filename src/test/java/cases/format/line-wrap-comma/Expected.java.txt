@@ -2,7 +2,11 @@ package sample;
 
 public class Wrap {
     public void run() {
-        compute(argumentOne, argumentTwo, argumentThree,
-            argumentFour);
+        compute(
+            argumentOne,
+            argumentTwo,
+            argumentThree,
+            argumentFour
+        );
     }
 }

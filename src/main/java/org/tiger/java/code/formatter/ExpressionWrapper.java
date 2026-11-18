@@ -16,6 +16,7 @@ import com.sun.source.tree.LambdaExpressionTree;
 import com.sun.source.tree.LiteralTree;
 import com.sun.source.tree.MemberSelectTree;
 import com.sun.source.tree.MethodInvocationTree;
+import com.sun.source.tree.NewClassTree;
 import com.sun.source.tree.ParenthesizedTree;
 import com.sun.source.tree.ReturnTree;
 import com.sun.source.tree.ThrowTree;
@@ -166,6 +167,8 @@ final class ExpressionWrapper {
 
       if (node.getExpression() instanceof AssignmentTree assignment) {
         tryWrapDeclarator(ctx.text(assignment.getVariable()), assignment, assignment.getExpression(), ctx, edits);
+      } else if (node.getExpression() instanceof MethodInvocationTree call) {
+        tryWrapBareCall(node, call, ctx, edits);
       }
 
       return null;
@@ -325,7 +328,8 @@ final class ExpressionWrapper {
     List<String> lines;
 
     if (isAlwaysGlue(expr)) {
-      List<String> rendered = render(expr, keywordText.length() + 1, level + 1, reserved);
+      List<String> rendered = render(expr, level * ctx.indentWidth() + keywordText.length() + 1,
+        levelFor(expr, level), reserved);
       lines = new ArrayList<>();
       lines.add(keywordText + " " + rendered.get(0));
       lines.addAll(rendered.subList(1, rendered.size()));
@@ -499,7 +503,12 @@ final class ExpressionWrapper {
         }
       }
     } else {
-      rendered = render(expression, arrowIndent + lead.length(), level, ctx.reserving(1));
+      rendered = render(
+        expression,
+        arrowIndent + lead.length(),
+        levelFor(expression, arrowIndent / w),
+        ctx.reserving(1)
+      );
     }
 
     StringBuilder replacement = new StringBuilder(String.join("\n", head));
@@ -554,7 +563,8 @@ final class ExpressionWrapper {
         out.add("");
       } else {
         boolean finalCloser = n == lines.length - 1 && firstOpens && ")]}".indexOf(lines[n].strip().charAt(0)) >= 0;
-        int indent = finalCloser ? arrowIndent : Math.max(0, lines[n].length() - lines[n].stripLeading().length() + delta);
+        int indent =
+          finalCloser ? arrowIndent : Math.max(0, lines[n].length() - lines[n].stripLeading().length() + delta);
         out.add(" ".repeat(indent) + lines[n].strip());
       }
     }
@@ -714,9 +724,61 @@ final class ExpressionWrapper {
     edits.add(new Edit(open, close + 1, replacement.toString()));
   }
 
+  /** {@code new Type(args)} with no anonymous class body, outer instance or constructor type arguments. */
+  private static boolean isPlainNew(NewClassTree node) {
+    return node.getClassBody() == null && node.getEnclosingExpression() == null && node.getTypeArguments().isEmpty();
+  }
+
+  /**
+   * The level to hand {@link #render} for {@code expr} starting on a line at {@code lineLevel}. A lone
+   * call ({@code foo(...)}) or {@code new Type(...)} puts its arguments one level under its own line, so it
+   * takes the line's level; everything else (a chain's dots, an operator cascade) is rendered one level
+   * deeper than the line.
+   */
+  private static int levelFor(ExpressionTree expr, int lineLevel) {
+    boolean loneCall = expr instanceof MethodInvocationTree call && collectChain(call).size() == 1;
+    boolean plainNew = expr instanceof NewClassTree nct && isPlainNew(nct);
+    return loneCall || plainNew ? lineLevel : lineLevel + 1;
+  }
+
+  /** A call statement ({@code foo(a, b);}, {@code a.b().c();}) with a line over budget: rendered like any other call. */
+  private static void tryWrapBareCall(ExpressionStatementTree statement, MethodInvocationTree call, Ctx ctx,
+    List<Edit> edits) {
+    int ownerStart = ctx.start(statement);
+    int lineStart = lineStartOf(ctx.source(), ownerStart);
+
+    if (!ctx.source().substring(lineStart, ownerStart).isBlank()) {
+      // does not start its own line
+      return;
+    }
+
+    int level = (ownerStart - lineStart) / ctx.indentWidth();
+    int stmtEnd = statementEnd(ctx, call);
+    int lastLineEnd = lineEndOf(ctx.source(), stmtEnd);
+
+    if (!anyLineExceedsBudget(ctx, lineStart, lastLineEnd) || containsComment(ctx, ownerStart, stmtEnd + 1)) {
+      return;
+    }
+
+    List<String> rendered = render(call, ownerStart - lineStart, levelFor(call, level), ctx.reserving(1));
+    int worst = 0;
+
+    for (int i = 0; i < rendered.size(); i++) {
+      worst = Math.max(worst, (i == 0 ? ownerStart - lineStart : 0) + rendered.get(i).length());
+    }
+
+    if (worst >= maxLineWidth(ctx, lineStart, lastLineEnd)) {
+      // nothing this engine can do actually shortens the worst line
+      return;
+    }
+
+    edits.add(new Edit(ownerStart, stmtEnd + 1, String.join("\n", rendered) + ";"));
+  }
+
   /** Whether `expr`'s own top construct always glues to whatever precedes it (never isolated alone). */
   private static boolean isAlwaysGlue(ExpressionTree expr) {
     return expr instanceof MethodInvocationTree
+            || expr instanceof NewClassTree nct && isPlainNew(nct)
             || expr instanceof UnaryTree ut && unaryPrefix(ut) != null
             || expr instanceof TypeCastTree
             || expr instanceof LambdaExpressionTree lt && lt.getBodyKind() == LambdaExpressionTree.BodyKind.EXPRESSION;
@@ -853,7 +915,7 @@ final class ExpressionWrapper {
       String prefix = lambdaPrefix(lt, ctx);
       ExpressionTree lambdaBody = (ExpressionTree) lt.getBody();
       // A chain as the lambda's body: its dots step one level under the lambda's own line.
-      int bodyLevel = lambdaBody instanceof MethodInvocationTree call && collectChain(call).size() > 2
+      int bodyLevel = lambdaBody instanceof MethodInvocationTree call && collectChain(call).size() > 1
                 ? level + 1
                 : level;
       return betterOf(verbatim, columnUsed, renderPrefixed(prefix, lambdaBody, columnUsed, bodyLevel, ctx));
@@ -865,6 +927,11 @@ final class ExpressionWrapper {
 
     if (expr instanceof MethodInvocationTree mit) {
       return betterOf(verbatim, columnUsed, renderCallOrChain(mit, columnUsed, level, ctx));
+    }
+
+    if (expr instanceof NewClassTree nct && isPlainNew(nct)) {
+      return betterOf(verbatim, columnUsed,
+        renderCall("new " + ctx.text(nct.getIdentifier()), nct.getArguments(), columnUsed, level, ctx));
     }
 
     // Atomic / not specifically handled (instanceof, literals, identifiers, new/switch
@@ -1016,7 +1083,12 @@ final class ExpressionWrapper {
     }
 
     Segment.Head head = (Segment.Head) segments.get(0);
-    List<String> receiver = render(head.tree(), columnUsed, level, ctx);
+    List<String> receiver = render(
+      head.tree(),
+      columnUsed,
+      head.tree() instanceof NewClassTree ? level - 1 : level,
+      ctx
+    );
     List<String> out = new ArrayList<>(receiver);
 
     // The chain's dots sit at `level`; the line its head is on is one level shallower.
@@ -1132,7 +1204,11 @@ final class ExpressionWrapper {
       // sit one level under its head instead of level with it.
       boolean soleChain = args.size() == 1 && args.get(0) instanceof MethodInvocationTree inner
                 && collectChain(inner).size() > 1;
-      int childLevel = args.size() == 1 && !soleChain ? argLevel : argLevel + 1;
+      // A lone call or `new` starts its own line here, so its arguments go one level under that line
+      // whether it is the only argument or one of several.
+      boolean loneCallOrNew = levelFor(args.get(i), argLevel) == argLevel
+        && (args.get(i) instanceof MethodInvocationTree || args.get(i) instanceof NewClassTree);
+      int childLevel = loneCallOrNew || args.size() == 1 && !soleChain ? argLevel : argLevel + 1;
       String suffix = i < args.size() - 1 ? "," : "";
       List<String> rendered = render(args.get(i), indent, childLevel, suffix.isEmpty() ? ctx : ctx.reserving(1));
       out.add(" ".repeat(indent) + rendered.get(0));

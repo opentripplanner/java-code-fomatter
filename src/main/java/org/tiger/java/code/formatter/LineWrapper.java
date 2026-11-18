@@ -207,6 +207,7 @@ final class LineWrapper {
           // there would leave it alone on a line (the operand it belongs to is on the other side).
           boolean leading = source.substring(start, i).isBlank();
           boolean trailing = source.substring(i + matched, end).isBlank();
+
           if (!(switchArm && source.startsWith("->", i)) && !leading && !trailing) {
             operators.add(new Candidate(depth, i));
           }
@@ -260,8 +261,17 @@ final class LineWrapper {
     }
 
     return switch (source.substring(k + 1, wordEnd)) {
-      case "public", "private", "protected", "static", "final", "abstract", "default", "synchronized", "native",
-        "strictfp" -> true;
+      case "public",
+        "private",
+        "protected",
+        "static",
+        "final",
+        "abstract",
+        "default",
+        "synchronized",
+        "native",
+        "strictfp"
+          -> true;
       default -> false;
     };
   }

@@ -10,7 +10,9 @@ class A {
                 yield 1;
             }
             default
-                -> throw new IllegalStateException("Cannot convert the mode to a form factor");
+                -> throw new IllegalStateException(
+                    "Cannot convert the mode to a form factor"
+                );
         };
     }
 }

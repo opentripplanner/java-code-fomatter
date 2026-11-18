@@ -1,0 +1,6 @@
+class A {
+    void f() {
+        assertTrue(logMessages.stream().anyMatch(msg -> msg.contains("A long message that fills the line")), "m");
+        items.forEach(item -> store.add("A long first argument here", "second long argument", item));
+    }
+}

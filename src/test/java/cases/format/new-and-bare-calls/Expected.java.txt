@@ -1,0 +1,48 @@
+class A {
+    Object f() {
+        registerTransferHandler(
+            firstArgumentOfTheCall,
+            secondArgumentOfTheCall,
+            third
+        );
+        var a = someFunctionName(
+            firstArgumentOfTheCall,
+            secondArgumentOfTheCall,
+            third
+        );
+        var updater = new VehicleParkingUpdater(
+            updaterRef,
+            parameters.facilitiesUrl(),
+            feedId
+        );
+        var params = new Params(
+            c
+                .of("url")
+                .since(V2_2)
+                .summary("URL of the data.")
+                .asString(null),
+            tz
+        );
+        var nested = new Outer(
+            new Inner(
+                firstArgumentOfTheCall,
+                secondArgumentOfTheCall
+            ),
+            third
+        );
+        var shortOne = new Short(a, b);
+        throw new IllegalStateException(
+            "Cannot convert the street mode to a form factor",
+            cause
+        );
+    }
+
+    Object g() {
+        return new CarpoolTripBuilder(
+            new FeedScopedId(feedId, tripId),
+            startTime,
+            endTime,
+            provider
+        );
+    }
+}

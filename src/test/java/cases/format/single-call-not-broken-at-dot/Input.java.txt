@@ -1,5 +1,5 @@
 class A {
     void f() {
-        run(new SomeVeryLongTypeNameForTesting().withAnExtremelyLongMethodNameThatNeverFits(points));
+        assert new SomeVeryLongTypeNameForTesting().withAnExtremelyLongMethodNameThatNeverFits(points);
     }
 }

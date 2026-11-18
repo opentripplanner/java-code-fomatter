@@ -8,7 +8,9 @@ public class ReturnThrow {
     }
 
     void fail() {
-        throw
-            new IllegalStateException(someLongVariableNameHere + anotherLongVariableNameHereToo);
+        throw new IllegalStateException(
+            someLongVariableNameHere
+            + anotherLongVariableNameHereToo
+        );
     }
 }
