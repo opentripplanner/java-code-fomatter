@@ -10,7 +10,6 @@ import java.util.List;
  * the end of a line of code.
  * <p>
  * Two placements differ from "directly above":
- * <p>
  * <ul>
  *   <li>A line that closes one block and opens the next ({@code } else { // why}, {@code } catch (...) { // why}) puts
  *       the comment on the first line <em>inside</em> the opened block, since above the line it would read as part of

@@ -296,7 +296,7 @@ final class JavadocFormatter {
           separator = "";
         }
 
-        emitSeparator(out, previous, separator, true);
+        emitBlockSeparator(out, previous, separator);
         separator = "";
         out.add(line);
         i++;
@@ -331,7 +331,7 @@ final class JavadocFormatter {
           separator = "";
         }
 
-        emitSeparator(out, previous, separator, true);
+        emitBlockSeparator(out, previous, separator);
         separator = "";
         int itemIndent = line.length() - line.stripLeading().length();
         List<String> item = new ArrayList<>();
@@ -416,6 +416,16 @@ final class JavadocFormatter {
     reflowInto(out, lines, available, 0, 0, !classic);
 
     return Kind.TEXT;
+  }
+
+  /**
+   * The separator before an HTML block ({@code <ul>}, {@code <pre>}, ...): a blank line stays, a {@code <p>} is
+   * dropped.
+   */
+  private static void emitBlockSeparator(List<String> out, Kind previous, String separator) {
+    if (previous != Kind.NONE && separator.equals("blank")) {
+      out.add("");
+    }
   }
 
   private static void emitSeparator(List<String> out, Kind previous, String separator, boolean classic) {

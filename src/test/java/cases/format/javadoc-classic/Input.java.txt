@@ -81,4 +81,24 @@ class A {
      */
     void listAfterParagraph() {
     }
+
+    /**
+     * A paragraph before blocks that an author typed a p tag in front of.
+     * <p>
+     * <ul>
+     *   <li>a list
+     * </ul>
+     * <p>
+     * <pre>
+     *   verbatim
+     * </pre>
+     * <p>
+     * A paragraph after the blocks keeps its p tag.
+     * <p>
+     * <ol>
+     *   <li>numbered
+     * </ol>
+     */
+    void tagsBeforeBlocks() {
+    }
 }
