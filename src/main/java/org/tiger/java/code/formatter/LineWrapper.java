@@ -192,7 +192,7 @@ final class LineWrapper {
         boolean nextDigit = i + 1 < end && Character.isDigit(source.charAt(i + 1));
         boolean afterStringLiteral = i > start && source.charAt(i - 1) == '"';
 
-        if (!prevDigit && !nextDigit && !afterStringLiteral) {
+        if (!prevDigit && !nextDigit && !afterStringLiteral && isCallDot(source, i, end)) {
           Candidate dot = new Candidate(depth, i);
           operators.add(dot);
           dots.add(dot);
@@ -242,6 +242,44 @@ final class LineWrapper {
    * {@code '>'} is type-name text - returns the index just past that {@code '>'}; otherwise
    * {@code -1}. A spaced comparison ({@code a < b}) never matches.
    */
+  /**
+   * Whether the {@code '<'} at {@code i} follows a declaration modifier ({@code public static <T extends X>
+   * ...}): the type parameters of a generic method or constructor.
+   */
+  private static boolean followsModifier(String source, int start, int i) {
+    int k = i - 1;
+
+    while (k >= start && Character.isWhitespace(source.charAt(k))) {
+      k--;
+    }
+
+    int wordEnd = k + 1;
+
+    while (k >= start && Character.isJavaIdentifierPart(source.charAt(k))) {
+      k--;
+    }
+
+    return switch (source.substring(k + 1, wordEnd)) {
+      case "public", "private", "protected", "static", "final", "abstract", "default", "synchronized", "native",
+        "strictfp" -> true;
+      default -> false;
+    };
+  }
+
+  /**
+   * Whether the {@code '.'} at {@code i} is followed by a method call ({@code .name(}), as opposed to a member of a
+   * qualified name ({@code a.b.C}): only a call's dot is a place to break a chain.
+   */
+  private static boolean isCallDot(String source, int i, int end) {
+    int k = i + 1;
+
+    while (k < end && Character.isJavaIdentifierPart(source.charAt(k))) {
+      k++;
+    }
+
+    return k > i + 1 && k < end && source.charAt(k) == '(';
+  }
+
   private static int genericArgumentsEnd(LiteralScanner.Scan scan, int start, int i, int end) {
     String source = scan.source();
 
@@ -251,7 +289,7 @@ final class LineWrapper {
 
     char before = source.charAt(i - 1);
 
-    if (!Character.isJavaIdentifierPart(before) && before != '.') {
+    if (!Character.isJavaIdentifierPart(before) && before != '.' && !followsModifier(source, start, i)) {
       return -1;
     }
 

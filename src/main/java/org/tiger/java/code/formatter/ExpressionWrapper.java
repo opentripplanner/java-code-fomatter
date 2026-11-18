@@ -484,10 +484,19 @@ final class ExpressionWrapper {
     String expressionText = ctx.text(expression);
 
     if (expressionText.indexOf('\n') >= 0) {
-      rendered = relayout(expressionText, arrowIndent, w);
+      // Already wrapped for the old position of the arrow: join it back if it now fits on the arrow's
+      // line, else keep its shape, shifted to the new position.
+      String bodyOnOneLine = collapse(expressionText);
 
-      if (rendered == null) {
-        return;
+      if (!expressionText.contains("{")
+        && arrowIndent + lead.length() + bodyOnOneLine.length() + 1 <= ctx.wrapAtColumn()) {
+        rendered = List.of(bodyOnOneLine);
+      } else {
+        rendered = shiftBody(expressionText, arrowIndent, w);
+
+        if (rendered == null) {
+          return;
+        }
       }
     } else {
       rendered = render(expression, arrowIndent + lead.length(), level, ctx.reserving(1));
@@ -507,61 +516,47 @@ final class ExpressionWrapper {
     edits.add(new Edit(caseStart, bodyEnd, replacement.toString()));
   }
 
+  /** {@code text} on one line: line breaks (and the indentation after them) removed, with no space before a chain's dot. */
+  private static String collapse(String text) {
+    return text.replaceAll("\\s*\\n\\s*\\.", ".").replaceAll("\\s*\\n\\s*", " ").replace("( ", "(").replace(" )", ")");
+  }
+
   /**
-   * Re-lays out an already multi-line expression relative to {@code baseIndent}: every line
-   * after the first is indented one level per bracket still open at its start (a leading closer
-   * returns to the opener's level). Returns {@code null} for text this simple scheme can't
-   * safely reflow (text blocks).
+   * Moves an already multi-line expression to start at {@code arrowIndent} ({@code -> expression}),
+   * keeping the shape of its later lines: the first of them goes one level under the arrow and every
+   * other line is shifted by the same amount, so arguments and chain calls keep their indentation
+   * relative to each other. A final closing bracket that closes the bracket the first line opened
+   * goes back level with the arrow. Returns {@code null} for text this can't safely shift (text blocks).
    */
-  private static List<String> relayout(String text, int baseIndent, int indentWidth) {
+  private static List<String> shiftBody(String text, int arrowIndent, int indentWidth) {
     if (text.contains("\"\"\"")) {
       return null;
     }
 
-    LiteralScanner.Scan scan = LiteralScanner.scan(text);
     String[] lines = text.split("\n", -1);
+    int anchor = -1;
+
+    for (int n = 1; n < lines.length && anchor < 0; n++) {
+      if (!lines[n].isBlank()) {
+        anchor = lines[n].length() - lines[n].stripLeading().length();
+      }
+    }
+
+    int delta = arrowIndent + indentWidth - Math.max(anchor, 0);
+    String first = lines[0].stripTrailing();
+    boolean firstOpens = !first.isEmpty() && "([{".indexOf(first.charAt(first.length() - 1)) >= 0;
     List<String> out = new ArrayList<>();
-    int open = 0;
-    int offset = 0;
 
     for (int n = 0; n < lines.length; n++) {
-      String trimmed = lines[n].strip();
-      int leadingWs = lines[n].length() - lines[n].stripLeading().length();
-      int closers = 0;
-
-      while (closers < trimmed.length() && ")]}".indexOf(trimmed.charAt(closers)) >= 0
-                && !scan.isVerbatim(offset + leadingWs + closers)) {
-        closers++;
-      }
-
       if (n == 0) {
-        out.add(trimmed);
+        out.add(lines[n].strip());
+      } else if (lines[n].isBlank()) {
+        out.add("");
       } else {
-        int level = Math.max(0, open - closers);
-
-        if (level == 0 && closers == 0) {
-          // a continuation outside any bracket (a chain's `.call()`, an operator)
-          level = 1;
-        }
-
-        out.add(" ".repeat(baseIndent + level * indentWidth) + trimmed);
+        boolean finalCloser = n == lines.length - 1 && firstOpens && ")]}".indexOf(lines[n].strip().charAt(0)) >= 0;
+        int indent = finalCloser ? arrowIndent : Math.max(0, lines[n].length() - lines[n].stripLeading().length() + delta);
+        out.add(" ".repeat(indent) + lines[n].strip());
       }
-
-      for (int k = 0; k < lines[n].length(); k++) {
-        if (scan.isVerbatim(offset + k)) {
-          continue;
-        }
-
-        char c = lines[n].charAt(k);
-
-        if ("([{".indexOf(c) >= 0) {
-          open++;
-        } else if (")]}".indexOf(c) >= 0) {
-          open--;
-        }
-      }
-
-      offset += lines[n].length() + 1;
     }
 
     return out;

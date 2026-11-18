@@ -1,0 +1,10 @@
+class A {
+    public static <T extends RaptorTripSchedule> OptimizeTransferService<T> createOptimizeTransferService(
+        IntFunction<StopLocation> stopLookup) {
+        return null;
+    }
+
+    private void f(
+        @Nullable GtfsRealtime.TripUpdate.StopTimeUpdate.StopTimeProperties.DropOffPickupType type) {
+    }
+}

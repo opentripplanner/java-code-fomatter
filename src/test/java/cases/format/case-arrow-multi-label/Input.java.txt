@@ -2,11 +2,11 @@ class A {
     Object f(Mode mode) {
         return switch (mode) {
             case MARTA,
-              COBB_EXPRESS,
-              GCT_EXPRESS_Z1 -> new TransferMeta(
-              TransferType.FREE_TRANSFER,
-              Money.ZERO_USD,
-              payOnExit
+                COBB_EXPRESS,
+                GCT_EXPRESS_Z1 -> new TransferMeta(
+                TransferType.FREE_TRANSFER,
+                Money.ZERO_USD,
+                payOnExit
             );
             default -> null;
         };
