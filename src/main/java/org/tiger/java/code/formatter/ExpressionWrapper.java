@@ -51,7 +51,8 @@ import java.util.List;
  */
 final class ExpressionWrapper {
 
-    private record Ctx(String source, CompilationUnitTree unit, SourcePositions positions, FormatterConfig config) {
+    private record Ctx(String source, CompilationUnitTree unit, SourcePositions positions, FormatterConfig config,
+        LiteralScanner.Scan scan) {
 
         int start(Tree tree) {
             return (int) positions.getStartPosition(unit, tree);
@@ -77,7 +78,7 @@ final class ExpressionWrapper {
          * (the statement-terminating `;`) that isn't part of the tree being rendered but will
          * still land on whatever the rendering's last line turns out to be. */
         Ctx reserving(int n) {
-            return new Ctx(source, unit, positions, new FormatterConfig(Math.max(1, config.wrapAtColumn() - n), config.indent()));
+            return new Ctx(source, unit, positions, new FormatterConfig(Math.max(1, config.wrapAtColumn() - n), config.indent()), scan);
         }
     }
 
@@ -90,7 +91,7 @@ final class ExpressionWrapper {
     static String wrap(String source, FormatterConfig config) {
         try {
             SyntaxValidator.Parsed parsed = SyntaxValidator.parseTree(source);
-            Ctx ctx = new Ctx(source, parsed.unit(), parsed.positions(), config);
+            Ctx ctx = new Ctx(source, parsed.unit(), parsed.positions(), config, LiteralScanner.scan(source));
             List<Edit> edits = new ArrayList<>();
             parsed.unit().accept(new CandidateScanner(ctx, edits), null);
             return applyEdits(source, edits);
@@ -271,6 +272,10 @@ final class ExpressionWrapper {
             return;
         }
 
+        if (containsComment(ctx, ownerStart, stmtEnd + 1)) {
+            return;
+        }
+
         // Reserve one column throughout for the statement-terminating ';', which isn't part of
         // `expr` but always lands on whatever line this rendering's content ends on.
         Ctx reserved = ctx.reserving(1);
@@ -414,6 +419,9 @@ final class ExpressionWrapper {
         if (!anyLineExceedsBudget(ctx, lineStart, lastLineEnd)) {
             return;
         }
+        if (containsComment(ctx, open, close + 1)) {
+            return;
+        }
         int level = 0;
         while (lineStart + level * ctx.indentWidth() < source.length()
             && source.startsWith(" ".repeat(ctx.indentWidth()), lineStart + level * ctx.indentWidth())) {
@@ -453,6 +461,20 @@ final class ExpressionWrapper {
             end++;
         }
         return end; // points at ';'
+    }
+
+    /**
+     * Whether {@code [start, end)} holds a comment. The AST-based rendering rebuilds text from
+     * its nodes, which carry no comments, so rewriting such a span would silently delete them.
+     */
+    private static boolean containsComment(Ctx ctx, int start, int end) {
+        for (int i = start; i < end; i++) {
+            LiteralScanner.Kind kind = ctx.scan().kindAt(i);
+            if (kind == LiteralScanner.Kind.LINE_COMMENT || kind == LiteralScanner.Kind.BLOCK_COMMENT) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int lineStartOf(String source, int offset) {
@@ -695,8 +717,10 @@ final class ExpressionWrapper {
         int first = 1;
         String headText = ctx.text(head.tree());
         boolean stringHead = head.tree() instanceof LiteralTree lt && lt.getKind() == Tree.Kind.STRING_LITERAL;
-        if (receiver.size() == 1 && (stringHead || isFactoryHead(headText, ctx.indentWidth()))) {
-            // `Type.factory(...)` / short receivers keep their first call on the head's line.
+        boolean singleCall = segments.size() == 2;
+        if (receiver.size() == 1 && (stringHead || singleCall || isFactoryHead(headText, ctx.indentWidth()))) {
+            // `Type.factory(...)`, `"literal".method(...)` and a lone `receiver.call(...)` keep the
+            // first call on the head's line.
             Segment.Dot dot = (Segment.Dot) segments.get(1);
             int identifierStart = ctx.end(dot.select()) - dot.name().length();
             String verbatimSegment = "." + ctx.source().substring(identifierStart, ctx.end(dot.call()));
@@ -733,12 +757,12 @@ final class ExpressionWrapper {
         return out;
     }
 
-    /** A plain identifier that's capitalised (a type name, so `Type.factory()`) or no longer than an indent step. */
+    /** A plain, capitalised identifier: a type name, so `Type.factory()`. */
     private static boolean isFactoryHead(String text, int indentWidth) {
         if (!text.matches("[A-Za-z_$][A-Za-z0-9_$]*")) {
             return false;
         }
-        return Character.isUpperCase(text.charAt(0)) || text.length() <= indentWidth;
+        return Character.isUpperCase(text.charAt(0));
     }
 
     /** Collects `[receiver, .seg1, .seg2, ...]` by walking the method-select chain outer-to-inner, then reversing. */

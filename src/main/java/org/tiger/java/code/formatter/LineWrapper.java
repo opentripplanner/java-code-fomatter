@@ -132,6 +132,7 @@ final class LineWrapper {
         String source = scan.source();
         List<Candidate> commas = new ArrayList<>();
         List<Candidate> operators = new ArrayList<>();
+        List<Candidate> dots = new ArrayList<>();
         int depth = depthAtStart;
         // The '->' of a `case X -> ...` / `default -> ...` arm is not a place to break.
         String lineText = source.substring(start, end).stripLeading();
@@ -168,7 +169,9 @@ final class LineWrapper {
                 boolean nextDigit = i + 1 < end && Character.isDigit(source.charAt(i + 1));
                 boolean afterStringLiteral = i > start && source.charAt(i - 1) == '"';
                 if (!prevDigit && !nextDigit && !afterStringLiteral) {
-                    operators.add(new Candidate(depth, i));
+                    Candidate dot = new Candidate(depth, i);
+                    operators.add(dot);
+                    dots.add(dot);
                 }
                 i++;
             } else {
@@ -181,6 +184,14 @@ final class LineWrapper {
                 } else {
                     i++;
                 }
+            }
+        }
+
+        // A lone `.` at its depth is a single call (`a.b(...)`), not a chain worth breaking before.
+        for (Candidate dot : dots) {
+            long sameDepth = dots.stream().filter(d -> d.depth() == dot.depth()).count();
+            if (sameDepth == 1) {
+                operators.remove(dot);
             }
         }
 

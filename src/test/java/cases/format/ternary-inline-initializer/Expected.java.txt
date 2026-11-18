@@ -1,0 +1,8 @@
+class A {
+    void f() {
+        var g =
+            point != null
+                ? new Geo[] { point, hull }
+                : new Geo[] { hull };
+    }
+}

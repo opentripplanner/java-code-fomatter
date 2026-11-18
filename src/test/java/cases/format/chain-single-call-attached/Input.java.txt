@@ -1,0 +1,5 @@
+class A {
+    void f() {
+        var x = new Foo().withLongMethodName(argumentOne, argumentTwo);
+    }
+}

@@ -321,7 +321,7 @@ final class ScopeReindenter {
                 String prefix = source.substring(lineStart, i);
                 String beforeBrace = prefix.stripTrailing();
                 boolean arrayInitializer = beforeBrace.endsWith("=") || beforeBrace.endsWith("]")
-                    || beforeBrace.endsWith(",")
+                    || beforeBrace.endsWith(",") || beforeBrace.endsWith("(")
                     || (beforeBrace.isEmpty() && !stack.isEmpty() && stack.peek().isEnum());
                 boolean hangs = lineIsContinuation
                     && (ANON_OR_LAMBDA.matcher(prefix).find()
@@ -440,6 +440,9 @@ final class ScopeReindenter {
         if (!found) {
             return null;
         }
+        if (last == '}' && endsWithInlineInitializer(scan, lineStart, contentEnd)) {
+            return false;
+        }
         if (last == ';' || last == '{' || last == '}') {
             return true;
         }
@@ -463,6 +466,39 @@ final class ScopeReindenter {
      * {@code @SuppressWarnings("x")}). A line like {@code @Nullable Foo foo,} has a parameter or
      * declaration after its annotation, so it is not one.
      */
+    /**
+     * Whether a line's trailing {@code }} closes an inline array initializer / expression block
+     * ({@code new Foo[] { a, b }}): its matching {@code {} follows {@code ]}, {@code =}, {@code ,}
+     * or {@code (}. Such a line is part of an enclosing expression, not the end of a statement.
+     */
+    private static boolean endsWithInlineInitializer(LiteralScanner.Scan scan, int lineStart, int contentEnd) {
+        String source = scan.source();
+        int j = contentEnd - 1;
+        while (j >= lineStart && (Character.isWhitespace(source.charAt(j)) || scan.isVerbatim(j))) {
+            j--;
+        }
+        if (j < lineStart || source.charAt(j) != '}') {
+            return false;
+        }
+        int depth = 0;
+        for (int i = j; i >= lineStart; i--) {
+            if (scan.isVerbatim(i)) {
+                continue;
+            }
+            char c = source.charAt(i);
+            if (c == '}') {
+                depth++;
+            } else if (c == '{' && --depth == 0) {
+                int k = i - 1;
+                while (k >= lineStart && Character.isWhitespace(source.charAt(k))) {
+                    k--;
+                }
+                return k >= lineStart && "]=,(".indexOf(source.charAt(k)) >= 0;
+            }
+        }
+        return false;
+    }
+
     private static boolean isAnnotationUsageLine(LiteralScanner.Scan scan, int lineStart, int contentEnd) {
         String source = scan.source();
         int i = lineStart;

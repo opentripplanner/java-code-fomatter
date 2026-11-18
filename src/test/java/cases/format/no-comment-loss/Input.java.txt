@@ -1,0 +1,14 @@
+class A {
+    void f() {
+        if (
+            // the first comment
+            firstOperandIsFairlyLong ||
+            // the second comment
+            secondOperandIsFairlyLong || thirdOperandIsLong
+        ) {
+            run();
+        }
+        String value = aaaaaaaaaaaaaaaaaaaa + // trailing note
+            bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;
+    }
+}
