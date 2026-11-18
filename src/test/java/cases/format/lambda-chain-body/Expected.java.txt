@@ -1,0 +1,11 @@
+class A {
+    List<Consumer<Builder>> f() {
+        return List.of(
+            builder -> builder
+                .entranceId(makeId(group))
+                .name(vehicleName)
+                .walkAccessible(true)
+                .carAccessible(isCarPark)
+        );
+    }
+}

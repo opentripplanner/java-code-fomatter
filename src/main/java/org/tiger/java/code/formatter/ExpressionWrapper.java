@@ -744,7 +744,12 @@ final class ExpressionWrapper {
         }
         if (expr instanceof LambdaExpressionTree lt && lt.getBodyKind() == LambdaExpressionTree.BodyKind.EXPRESSION) {
             String prefix = lambdaPrefix(lt, ctx);
-            return betterOf(verbatim, columnUsed, renderPrefixed(prefix, (ExpressionTree) lt.getBody(), columnUsed, level, ctx));
+            ExpressionTree lambdaBody = (ExpressionTree) lt.getBody();
+            // A chain as the lambda's body: its dots step one level under the lambda's own line.
+            int bodyLevel = lambdaBody instanceof MethodInvocationTree call && collectChain(call).size() > 2
+                ? level + 1
+                : level;
+            return betterOf(verbatim, columnUsed, renderPrefixed(prefix, lambdaBody, columnUsed, bodyLevel, ctx));
         }
         if (expr instanceof ParenthesizedTree pt) {
             return betterOf(verbatim, columnUsed, renderBracketed("(", pt.getExpression(), ")", columnUsed, level, ctx));
