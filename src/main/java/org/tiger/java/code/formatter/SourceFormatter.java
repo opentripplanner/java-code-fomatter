@@ -12,43 +12,48 @@ import javax.tools.JavaFileObject;
  */
 public final class SourceFormatter {
 
-    public sealed interface FormatResult permits Formatted, ValidationFailed, InternalError {
+  public sealed interface FormatResult permits Formatted, ValidationFailed, InternalError {
+  }
+
+  public record Formatted(String text, List<Integer> unwrappableLines) implements FormatResult {
+  }
+
+  public record ValidationFailed(List<Diagnostic<? extends JavaFileObject>> diagnostics) implements FormatResult {
+  }
+
+  public record InternalError(String message) implements FormatResult {
+  }
+
+  private SourceFormatter() {
+  }
+
+  public static FormatResult format(String source) throws IOException {
+    return format(source, FormatterConfig.DEFAULT);
+  }
+
+  public static FormatResult format(String source, FormatterConfig config) throws IOException {
+    SyntaxValidator.ValidationResult original = SyntaxValidator.validate(source);
+
+    if (!original.valid()) {
+      return new ValidationFailed(original.diagnostics());
     }
 
-    public record Formatted(String text, List<Integer> unwrappableLines) implements FormatResult {
-    }
+    String reindented = ScopeReindenter.reindent(
+      BlankLineFormatter.format(CommentFormatter.format(source)),
+      config.indent()
+    );
+    // ExpressionWrapper hands multi-line spans (switch expressions, anonymous-class bodies) off
+    // verbatim, so after it moves their first line they need reindenting again.
+    String expressionWrapped = ScopeReindenter.reindent(ExpressionWrapper.wrap(reindented, config), config.indent());
+    LineWrapper.WrapResult wrapped = LineWrapper.wrap(expressionWrapped, config.wrapAtColumn(), config.indent());
 
-    public record ValidationFailed(List<Diagnostic<? extends JavaFileObject>> diagnostics) implements FormatResult {
-    }
+    SyntaxValidator.ValidationResult revalidated = SyntaxValidator.validate(wrapped.text());
 
-    public record InternalError(String message) implements FormatResult {
-    }
-
-    private SourceFormatter() {
-    }
-
-    public static FormatResult format(String source) throws IOException {
-        return format(source, FormatterConfig.DEFAULT);
-    }
-
-    public static FormatResult format(String source, FormatterConfig config) throws IOException {
-        SyntaxValidator.ValidationResult original = SyntaxValidator.validate(source);
-        if (!original.valid()) {
-            return new ValidationFailed(original.diagnostics());
-        }
-
-        String reindented = ScopeReindenter.reindent(BlankLineFormatter.format(CommentFormatter.format(source)), config.indent());
-        // ExpressionWrapper hands multi-line spans (switch expressions, anonymous-class bodies) off
-        // verbatim, so after it moves their first line they need reindenting again.
-        String expressionWrapped = ScopeReindenter.reindent(ExpressionWrapper.wrap(reindented, config), config.indent());
-        LineWrapper.WrapResult wrapped = LineWrapper.wrap(expressionWrapped, config.wrapAtColumn(), config.indent());
-
-        SyntaxValidator.ValidationResult revalidated = SyntaxValidator.validate(wrapped.text());
-        if (!revalidated.valid()) {
-            return new InternalError(
+    if (!revalidated.valid()) {
+      return new InternalError(
                 "formatting produced invalid Java; this is a formatter bug, not a problem with the input");
-        }
-
-        return new Formatted(wrapped.text(), wrapped.unwrappableLines());
     }
+
+    return new Formatted(wrapped.text(), wrapped.unwrappableLines());
+  }
 }

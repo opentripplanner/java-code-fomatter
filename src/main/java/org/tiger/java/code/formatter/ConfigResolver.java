@@ -24,69 +24,84 @@ import java.util.Properties;
  */
 public final class ConfigResolver {
 
-    private final Map<Path, Path> roots = new HashMap<>();
-    private final Map<Path, Properties> layered = new HashMap<>();
-    private final Map<Path, FormatterConfig> configs = new HashMap<>();
+  private final Map<Path, Path> roots = new HashMap<>();
+  private final Map<Path, Properties> layered = new HashMap<>();
+  private final Map<Path, FormatterConfig> configs = new HashMap<>();
 
-    /** The effective config for {@code file}. */
-    public synchronized FormatterConfig configFor(Path file) throws IOException {
-        Path dir = file.toAbsolutePath().normalize().getParent();
-        FormatterConfig cached = configs.get(dir);
-        if (cached != null) {
-            return cached;
-        }
-        FormatterConfig config;
-        try {
-            config = FormatterConfig.from(propertiesFor(dir));
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException(FormatterConfig.DIR_NAME + "/" + FormatterConfig.FILE_NAME + " for "
+  /** The effective config for {@code file}. */
+  public synchronized FormatterConfig configFor(Path file) throws IOException {
+    Path dir = file.toAbsolutePath().normalize().getParent();
+    FormatterConfig cached = configs.get(dir);
+
+    if (cached != null) {
+      return cached;
+    }
+
+    FormatterConfig config;
+
+    try {
+      config = FormatterConfig.from(propertiesFor(dir));
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(FormatterConfig.DIR_NAME + "/" + FormatterConfig.FILE_NAME + " for "
                 + dir + ": " + e.getMessage(), e);
-        }
-        configs.put(dir, config);
-        return config;
     }
 
-    /**
-     * The outermost ancestor-or-self of {@code dir} that holds a {@code .git} entry, or {@code null}
-     * if none does (not under version control).
-     */
-    public synchronized Path rootOf(Path dir) {
-        Path absolute = dir.toAbsolutePath().normalize();
-        return rootOfNormalized(absolute);
+    configs.put(dir, config);
+    return config;
+  }
+
+  /**
+   * The outermost ancestor-or-self of {@code dir} that holds a {@code .git} entry, or {@code null}
+   * if none does (not under version control).
+   */
+  public synchronized Path rootOf(Path dir) {
+    Path absolute = dir.toAbsolutePath().normalize();
+    return rootOfNormalized(absolute);
+  }
+
+  private Path rootOfNormalized(Path dir) {
+    if (roots.containsKey(dir)) {
+      return roots.get(dir);
     }
 
-    private Path rootOfNormalized(Path dir) {
-        if (roots.containsKey(dir)) {
-            return roots.get(dir);
-        }
-        Path parent = dir.getParent();
-        Path root = parent == null ? null : rootOfNormalized(parent);
-        if (root == null && Files.exists(dir.resolve(".git"))) {
-            root = dir;
-        }
-        roots.put(dir, root);
-        return root;
+    Path parent = dir.getParent();
+    Path root = parent == null ? null : rootOfNormalized(parent);
+
+    if (root == null && Files.exists(dir.resolve(".git"))) {
+      root = dir;
     }
 
-    private Properties propertiesFor(Path dir) throws IOException {
-        Properties cached = layered.get(dir);
-        if (cached != null) {
-            return cached;
-        }
-        Path root = rootOfNormalized(dir);
-        Properties result = new Properties();
-        if (root != null && !dir.equals(root)) {
-            result.putAll(propertiesFor(dir.getParent()));
-        }
-        Path file = dir.resolve(FormatterConfig.DIR_NAME).resolve(FormatterConfig.FILE_NAME);
-        if (Files.isRegularFile(file)) {
-            Properties own = new Properties();
-            try (InputStream in = Files.newInputStream(file)) {
-                own.load(in);
-            }
-            result.putAll(own);
-        }
-        layered.put(dir, result);
-        return result;
+    roots.put(dir, root);
+    return root;
+  }
+
+  private Properties propertiesFor(Path dir) throws IOException {
+    Properties cached = layered.get(dir);
+
+    if (cached != null) {
+      return cached;
     }
+
+    Path root = rootOfNormalized(dir);
+    Properties result = new Properties();
+
+    if (root != null && !dir.equals(root)) {
+      result.putAll(propertiesFor(dir.getParent()));
+    }
+
+    Path file = dir.resolve(FormatterConfig.DIR_NAME).resolve(FormatterConfig.FILE_NAME);
+
+    if (Files.isRegularFile(file)) {
+      Properties own = new Properties();
+
+      try (InputStream in = Files.newInputStream(file)) {
+        own.load(in);
+      }
+
+      result.putAll(own);
+    }
+
+    layered.put(dir, result);
+    return result;
+  }
 }
