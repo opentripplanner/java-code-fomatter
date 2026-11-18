@@ -6,7 +6,8 @@ public class Comments {
             "http://example.com/some/really/long/path/here";
         // trailing comment, with a comma
         compute(argOne, argTwo, argThree);
-        // a comment with /* fake block comment markers */ inside it
+        // a comment with /* fake block comment markers */
+        // inside it
         String weird =
             "a string with // fake line comment markers inside";
         char q = '\'';

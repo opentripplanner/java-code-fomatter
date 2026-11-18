@@ -1,0 +1,17 @@
+class A {
+    void f() {
+        // A long comment of plain prose that runs well past the column limit and so must wrap onto a second line.
+        run();
+        // Short comment stays.
+        //   - a list item long enough that its continuation must line up under its own text
+        //   1. numbered item long enough that its continuation must line up under its own text
+        // see https://example.com/a/very/long/url/that/cannot/be/broken/anywhere/at/all/ok
+        // someObject.callSomething(withArguments, andMore, andEvenMoreArguments).andThenMore();
+        // columns     aligned      with      many      spaces      between      the      words      here
+        // NOSONAR this marker line must never be wrapped even though it is much too long for the limit
+        // First line of a block.
+        // Second line of the same block, which is long enough that it must be wrapped by itself alone.
+        // Third line of the block.
+        run(); // a trailing comment that is far too long and is moved above the line and then wrapped
+    }
+}
