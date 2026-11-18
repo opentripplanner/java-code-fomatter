@@ -1,0 +1,3 @@
+interface A {
+    public DataFetcher<org.example.generated.Types.WheelchairBoarding> wheelchairAccessible();
+}

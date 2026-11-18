@@ -146,7 +146,12 @@ final class LineWrapper {
                 continue;
             }
             char c = source.charAt(i);
-            if (c == '(' || c == '[') {
+            int genericEnd = c == '<' ? genericArgumentsEnd(scan, start, i, end) : -1;
+            if (genericEnd > 0) {
+                // A generic argument list (`<org.example.Type>`) is never broken, inside or at its
+                // brackets.
+                i = genericEnd;
+            } else if (c == '(' || c == '[') {
                 depth++;
                 i++;
             } else if (c == ')' || c == ']') {
@@ -178,6 +183,41 @@ final class LineWrapper {
             return fromComma;
         }
         return bestByDepth(source, operators, start, columnOffset, false, maxColumns);
+    }
+
+    /**
+     * If the {@code '<'} at {@code i} opens a generic argument list - it directly follows an
+     * identifier (or a {@code '.'}, as in {@code Foo.<T>bar()}) and everything up to its matching
+     * {@code '>'} is type-name text - returns the index just past that {@code '>'}; otherwise
+     * {@code -1}. A spaced comparison ({@code a < b}) never matches.
+     */
+    private static int genericArgumentsEnd(LiteralScanner.Scan scan, int start, int i, int end) {
+        String source = scan.source();
+        if (i <= start) {
+            return -1;
+        }
+        char before = source.charAt(i - 1);
+        if (!Character.isJavaIdentifierPart(before) && before != '.') {
+            return -1;
+        }
+        int nesting = 1;
+        for (int j = i + 1; j < end; j++) {
+            if (scan.isVerbatim(j)) {
+                return -1;
+            }
+            char c = source.charAt(j);
+            if (c == '<') {
+                nesting++;
+            } else if (c == '>') {
+                if (--nesting == 0) {
+                    return j + 1;
+                }
+            } else if (!Character.isJavaIdentifierPart(c) && c != '.' && c != ',' && c != ' ' && c != '['
+                && c != ']' && c != '@' && c != '?') {
+                return -1;
+            }
+        }
+        return -1;
     }
 
     private static int matchOperator(String source, int i, int end) {
