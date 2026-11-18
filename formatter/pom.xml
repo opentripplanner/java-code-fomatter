@@ -9,7 +9,7 @@
   -->
   <groupId>org.opentripplanner.java.code.formatter</groupId>
   <artifactId>java-code-formatter</artifactId>
-  <version>1-SNAPSHOT</version>
+  <version>1.0.0</version>
 
   <name>Java code formatter</name>
   <description>A fast, deterministic Java source formatter that proves it did not change the program.</description>

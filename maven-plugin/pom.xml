@@ -5,7 +5,7 @@
 
   <groupId>org.opentripplanner.java.code.formatter</groupId>
   <artifactId>java-formatter-maven-plugin</artifactId>
-  <version>1-SNAPSHOT</version>
+  <version>1.0.0</version>
   <packaging>maven-plugin</packaging>
 
   <name>Java code formatter Maven plugin</name>
@@ -44,8 +44,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.opentripplanner.java.code</groupId>
-      <artifactId>formatter</artifactId>
+      <groupId>org.opentripplanner.java.code.formatter</groupId>
+      <artifactId>java-code-formatter</artifactId>
       <version>${formatter.version}</version>
     </dependency>
     <dependency>
