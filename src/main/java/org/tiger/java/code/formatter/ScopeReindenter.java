@@ -1,31 +1,28 @@
 package org.tiger.java.code.formatter;
 
 /**
- * Reindents Java source purely by brace nesting: the leading whitespace of every line is replaced
- * with {@code depth * indentWidth} spaces, where {@code depth} is how many non-verbatim
- * {@code {}/}} braces are currently open. Nothing else about a line is touched - no token spacing,
- * no brace insertion.
- *
- * <p>A line whose previous (real) line doesn't end its statement - its last non-comment,
- * non-whitespace character isn't {@code ;}, {@code {} or {@code }} - is a continuation of that
- * statement (e.g. a line {@link LineWrapper} split off, or one a human already wrapped by hand) and
- * gets one extra indent level instead of the current brace depth. This is what makes wrapping
- * idempotent: reformatting an already-wrapped line recognizes it as a continuation instead of
- * flattening it back to the statement's own depth. Two exceptions to the "one extra level" rule:
- * a continuation line leading with a closing {@code )} (e.g. a wrapped parameter list's closer)
- * returns to the depth of whatever it's closing instead of drilling deeper, and a complete,
+ * Reindents Java source purely by brace nesting: the leading whitespace of every line is replaced with
+ * {@code depth * indentWidth} spaces, where {@code depth} is how many non-verbatim {@code {}/}} braces are currently
+ * open. Nothing else about a line is touched - no token spacing, no brace insertion.
+ * <p>
+ * A line whose previous (real) line doesn't end its statement - its last non-comment, non-whitespace character isn't
+ * {@code ;}, {@code {} or {@code }} - is a continuation of that statement (e.g. a line {@link LineWrapper} split off,
+ * or one a human already wrapped by hand) and gets one extra indent level instead of the current brace depth. This is
+ * what makes wrapping idempotent: reformatting an already-wrapped line recognizes it as a continuation instead of
+ * flattening it back to the statement's own depth. Two exceptions to the "one extra level" rule: a continuation line
+ * leading with a closing {@code )} (e.g. a wrapped parameter list's closer) returns to the depth of whatever it's
+ * closing instead of drilling deeper, and a complete,
+ * <p>
  * single-line annotation usage (e.g. {@code @Override}) is treated like {@code ;}/{@code {}/
  * {@code }} - it ends its own unit, so the declaration after it is never misread as continuing it.
- *
- * <p>Text-block interiors, and the line holding a text block's closing {@code """}, are left
- * completely untouched: per JLS 3.10.6 a text block's value depends on the common leading
- * whitespace of its content lines *and* its closing delimiter line, so reindenting that line would
- * silently change the string's value while keeping the file perfectly valid Java.
- *
- * <p>A still-open block comment's continuation lines (e.g. a javadoc's {@code " * "} lines) keep
- * their indentation relative to the comment's own opening line instead of being recomputed from
- * brace depth - that's what keeps a javadoc's conventional alignment intact when the comment as a
- * whole shifts to a new depth.
+ * <p>
+ * Text-block interiors, and the line holding a text block's closing {@code """}, are left completely untouched: per JLS
+ * 3.10.6 a text block's value depends on the common leading whitespace of its content lines *and* its closing delimiter
+ * line, so reindenting that line would silently change the string's value while keeping the file perfectly valid Java.
+ * <p>
+ * A still-open block comment's continuation lines (e.g. a javadoc's {@code " * "} lines) keep their indentation
+ * relative to the comment's own opening line instead of being recomputed from brace depth - that's what keeps a
+ * javadoc's conventional alignment intact when the comment as a whole shifts to a new depth.
  */
 final class ScopeReindenter {
 
@@ -313,9 +310,8 @@ final class ScopeReindenter {
   }
 
   /**
-   * Whether a continuation line leads with a closing {@code )} or a generic-closing {@code >}
-   * (not {@code >>}, {@code >=} or {@code >>>} operators), which by convention returns to the
-   * depth of whatever it closes.
+   * Whether a continuation line leads with a closing {@code )} or a generic-closing {@code >} (not {@code >>},
+   * {@code >=} or {@code >>>} operators), which by convention returns to the depth of whatever it closes.
    */
   private static boolean startsWithCloser(String trimmed) {
     if (trimmed.startsWith(")")) {
@@ -408,9 +404,8 @@ final class ScopeReindenter {
   }
 
   /**
-   * Pushes the line's display depth (and whether the line starts an annotation) for each
-   * unmatched '(' and pops one for each ')'. Returns whether a ')' on this line closed the
-   * parenthesis an annotation line opened.
+   * Pushes the line's display depth (and whether the line starts an annotation) for each unmatched '(' and pops one for
+   * each ')'. Returns whether a ')' on this line closed the parenthesis an annotation line opened.
    */
   private static boolean applyParens(LiteralScanner.Scan scan, int lineStart, int contentEnd,
         java.util.ArrayDeque<int[]> parens, int lineDisplayDepth, boolean lineStartsAnnotation) {
@@ -463,10 +458,9 @@ final class ScopeReindenter {
   }
 
   /**
-   * Whether a line's own code ends a statement/block ({@code true}: last real character is
-   * {@code ;}, {@code {} or {@code }}), continues one ({@code false}), or is blank/comment-only
-   * and transparent to continuation tracking ({@code null}). Trailing line/block comments don't
-   * count as the line's "real" ending.
+   * Whether a line's own code ends a statement/block ({@code true}: last real character is {@code ;},
+   * {@code {} or {@code }}), continues one ({@code false}), or is blank/comment-only and transparent to continuation
+   * tracking ({@code null}). Trailing line/block comments don't count as the line's "real" ending.
    */
   private static Boolean classifyLineEnd(LiteralScanner.Scan scan, int lineStart, int contentEnd,
         boolean enumConstantContext) {
@@ -536,8 +530,8 @@ final class ScopeReindenter {
 
   /**
    * Whether the line consists solely of one or more annotation usages ({@code @Override},
-   * {@code @SuppressWarnings("x")}). A line like {@code @Nullable Foo foo,} has a parameter or
-   * declaration after its annotation, so it is not one.
+   * {@code @SuppressWarnings("x")}). A line like {@code @Nullable Foo foo,} has a parameter or declaration after its
+   * annotation, so it is not one.
    */
   /**
    * Whether a line's trailing {@code }} closes an inline array initializer / expression block

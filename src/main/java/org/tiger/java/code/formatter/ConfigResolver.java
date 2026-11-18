@@ -9,18 +9,17 @@ import java.util.Map;
 import java.util.Properties;
 
 /**
- * Finds the {@link FormatterConfig} that applies to a file: the {@code .jcf/config.properties}
- * files of every directory from the outermost repository root down to the file's own directory,
- * layered so that a nearer file overrides only the keys it sets and inherits the rest. A module
- * (or a nested repository, or a git submodule) can therefore override the root's settings.
- *
- * <p>The <em>outermost repository root</em> is the topmost ancestor directory holding a
- * {@code .git} entry (a directory, or the file a submodule/worktree has). Outside any repository
- * only the file's own directory is consulted. Nothing is ever created here: configs are read only
- * where they already exist, so no {@code .jcf} folder appears in source directories.
- *
- * <p>Lookups are memoized per directory, so formatting thousands of files costs one walk per
- * directory.
+ * Finds the {@link FormatterConfig} that applies to a file: the {@code .jcf/config.properties} files of every directory
+ * from the outermost repository root down to the file's own directory, layered so that a nearer file overrides only the
+ * keys it sets and inherits the rest. A module (or a nested repository, or a git submodule) can therefore override the
+ * root's settings.
+ * <p>
+ * The <em>outermost repository root</em> is the topmost ancestor directory holding a {@code .git} entry (a directory,
+ * or the file a submodule/worktree has). Outside any repository only the file's own directory is consulted. Nothing is
+ * ever created here: configs are read only where they already exist, so no {@code .jcf} folder appears in source
+ * directories.
+ * <p>
+ * Lookups are memoized per directory, so formatting thousands of files costs one walk per directory.
  */
 public final class ConfigResolver {
 
@@ -51,8 +50,8 @@ public final class ConfigResolver {
   }
 
   /**
-   * The outermost ancestor-or-self of {@code dir} that holds a {@code .git} entry, or {@code null}
-   * if none does (not under version control).
+   * The outermost ancestor-or-self of {@code dir} that holds a {@code .git} entry, or {@code null} if none does (not
+   * under version control).
    */
   public synchronized Path rootOf(Path dir) {
     Path absolute = dir.toAbsolutePath().normalize();

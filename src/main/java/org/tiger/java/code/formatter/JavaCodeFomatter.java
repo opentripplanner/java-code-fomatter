@@ -17,10 +17,10 @@ import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
 /**
- * The command line entry point. Arguments are Java files and/or directories (every {@code .java}
- * file under them; in a git repository, the tracked and untracked-but-not-ignored ones).
- * Files are formatted in parallel, each under the config {@link ConfigResolver} finds for it, and a
- * content-hash {@link FormatCache} lets later runs skip every file that is already formatted.
+ * The command line entry point. Arguments are Java files and/or directories (every {@code .java} file under them; in a
+ * git repository, the tracked and untracked-but-not-ignored ones). Files are formatted in parallel, each under the
+ * config {@link ConfigResolver} finds for it, and a content-hash {@link FormatCache} lets later runs skip every file
+ * that is already formatted.
  */
 public class JavaCodeFomatter {
 
@@ -207,8 +207,8 @@ public class JavaCodeFomatter {
   }
 
   /**
-   * Records a fixed point: the source if formatting left it alone, or the formatted text if
-   * formatting that again also changes nothing (checked here, so only stable output is cached).
+   * Records a fixed point: the source if formatting left it alone, or the formatted text if formatting that again also
+   * changes nothing (checked here, so only stable output is cached).
    */
   private static void recordIfStable(FormatCache cache, byte[] sourceBytes, String text,
         List<Integer> unwrappableLines, boolean changed, FormatterConfig config) {
@@ -303,7 +303,9 @@ public class JavaCodeFomatter {
     return false;
   }
 
-  /** Runs {@code git -C dir args...}; the NUL-separated stdout entries, or {@code null} if git is unavailable or fails. */
+  /**
+   * Runs {@code git -C dir args...}; the NUL-separated stdout entries, or {@code null} if git is unavailable or fails.
+   */
   private static List<String> git(Path dir, String... args) {
     List<String> command = new ArrayList<>(List.of("git", "-C", dir.toString().isEmpty() ? "." : dir.toString()));
     command.addAll(List.of(args));

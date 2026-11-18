@@ -28,18 +28,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 /**
- * One data-driven test over every {@code format-cases/<name>/{Input.java.txt,Expected.java.txt}}
- * pair on the test-resources classpath: growing coverage is adding a fixture directory, not writing
- * code. Each case also gets a free idempotency check - formatting already-formatted code must be a
- * no-op.
- *
- * <p>Fixtures use a {@code .java.txt} extension, not {@code .java}: Jenesis compiles every {@code
- * .java} file under {@code src/test} as real source, so a plain {@code .java} fixture would be
- * compiled as test code instead of copied as a resource.
- *
- * <p>All cases share {@code src/test/java/cases/.jcf/config.properties} ({@code wrapAtColumn=60}), loaded
- * through the same {@link FormatterConfig} a real {@code .jcf/config.properties} would be - a narrower
- * column budget than the 120-column default keeps fixtures short and readable.
+ * One data-driven test over every {@code format-cases/<name>/{Input.java.txt,Expected.java.txt}} pair on the
+ * test-resources classpath: growing coverage is adding a fixture directory, not writing code. Each case also gets a
+ * free idempotency check - formatting already-formatted code must be a no-op.
+ * <p>
+ * Fixtures use a {@code .java.txt} extension, not {@code .java}: Jenesis compiles every {@code .java} file under
+ * {@code src/test} as real source, so a plain {@code .java} fixture would be compiled as test code instead of copied as
+ * a resource.
+ * <p>
+ * All cases share {@code src/test/java/cases/.jcf/config.properties} ({@code wrapAtColumn=60}), loaded through the same
+ * {@link FormatterConfig} a real {@code .jcf/config.properties} would be - a narrower column budget than the 120-column
+ * default keeps fixtures short and readable.
  */
 class FormatterGoldenFileTest {
 
@@ -132,8 +131,8 @@ class FormatterGoldenFileTest {
   }
 
   /**
-   * Wraps a resource {@link Path} that may require its own {@link FileSystem} (a resource inside
-   * a jar) - opens one only when needed, and closes only the one it opened.
+   * Wraps a resource {@link Path} that may require its own {@link FileSystem} (a resource inside a jar) - opens one
+   * only when needed, and closes only the one it opened.
    */
   private record MaybeOwnedFileSystem(Path path, FileSystem owned) implements AutoCloseable {
 

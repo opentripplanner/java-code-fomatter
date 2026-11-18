@@ -7,9 +7,9 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 /**
- * Formatting options, loadable from a {@code .jcf/config.properties} file (see {@link ConfigResolver}): the column at which
- * {@link LineWrapper}/{@link ExpressionWrapper} wrap a line, and the number of spaces per indent
- * level used throughout {@link ScopeReindenter}, {@link LineWrapper} and {@link ExpressionWrapper}.
+ * Formatting options, loadable from a {@code .jcf/config.properties} file (see {@link ConfigResolver}): the column at
+ * which {@link LineWrapper}/{@link ExpressionWrapper} wrap a line, and the number of spaces per indent level used
+ * throughout {@link ScopeReindenter}, {@link LineWrapper} and {@link ExpressionWrapper}.
  */
 public record FormatterConfig(int wrapAtColumn, int indent) {
 

@@ -4,25 +4,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Moves every trailing comment - a {@code //} comment, or a single-line {@code /* ... *}{@code /}
- * comment that ends its line, with code before it on the same line - onto its own line directly
- * above the code it follows, with that line's leading whitespace. ({@link ScopeReindenter} then
- * aligns it with the code it comments.) A comment is never left at the end of a line of code.
- *
- * <p>Two placements differ from "directly above":
+ * Moves every trailing comment - a {@code //} comment, or a single-line {@code /* ... *}{@code /} comment that ends its
+ * line, with code before it on the same line - onto its own line directly above the code it follows, with that line's
+ * leading whitespace. ({@link ScopeReindenter} then aligns it with the code it comments.) A comment is never left at
+ * the end of a line of code.
+ * <p>
+ * Two placements differ from "directly above":
+ * <p>
  * <ul>
- *   <li>A line that closes one block and opens the next ({@code } else { // why}, {@code } catch (...)
- *       { // why}) puts the comment on the first line <em>inside</em> the opened block, since above
- *       the line it would read as part of the block being closed.</li>
- *   <li>A line holding text-block content or its closing delimiter is never touched: a line
- *       inserted there would change the string's value.</li>
+ *   <li>A line that closes one block and opens the next ({@code } else { // why}, {@code } catch (...) { // why}) puts
+ *       the comment on the first line <em>inside</em> the opened block, since above the line it would read as part of
+ *       the block being closed.</li>
+ *   <li>A line holding text-block content or its closing delimiter is never touched: a line inserted there would change
+ *       the string's value.</li>
  * </ul>
- *
- * <p>A trailing comment that starts with a tool marker ({@code NOSONAR}, {@code NOPMD},
- * {@code CHECKSTYLE}, {@code noinspection}, {@code nosemgrep}, {@code lgtm}, {@code nolint},
- * {@code $NON-NLS}) stays on its line: such markers only work on the line they suppress.
- *
- * <p>Comments that start their own line, block comments with code after them on the line
+ * <p>
+ * A trailing comment that starts with a tool marker ({@code NOSONAR}, {@code NOPMD}, {@code CHECKSTYLE},
+ * {@code noinspection}, {@code nosemgrep}, {@code lgtm}, {@code nolint}, {@code $NON-NLS}) stays on its line: such
+ * markers only work on the line they suppress.
+ * <p>
+ * Comments that start their own line, block comments with code after them on the line
  * ({@code foo(/* flag *}{@code / true)}), and multi-line block comments are left as they are.
  */
 final class CommentFormatter {
@@ -117,8 +118,8 @@ final class CommentFormatter {
   }
 
   /**
-   * Whether {@code prefix} (the text of the line before the comment) holds code. Returns
-   * {@code null} when it touches a text block, which must not be edited around.
+   * Whether {@code prefix} (the text of the line before the comment) holds code. Returns {@code null} when it touches a
+   * text block, which must not be edited around.
    */
   private static Boolean codeBefore(LiteralScanner.Scan scan, int lineStart, String prefix) {
     boolean code = false;

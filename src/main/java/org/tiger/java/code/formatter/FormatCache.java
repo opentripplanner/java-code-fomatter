@@ -15,16 +15,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 /**
- * A set of "already formatted" fingerprints, kept in {@code <root>/.jcf/cache/<code>.set}. A
- * fingerprint is a hash of a file's content together with the config it was formatted under, so a
- * file is recorded only when formatting it again changes nothing (a fixed point). A later run skips
- * every file whose content and config hash is in the set: no parse, no formatting.
- *
- * <p>The set file is named after a hash of the formatter's own code, so any change to the
- * formatter starts a fresh cache and the old file is deleted on the next save. The set is written
- * once, at the end of a run, to a temporary file that is then renamed into place. The cache folder
- * ignores itself ({@code .gitignore} containing {@code *}), so it needs no entry in anyone's
- * {@code .gitignore}.
+ * A set of "already formatted" fingerprints, kept in {@code <root>/.jcf/cache/<code>.set}. A fingerprint is a hash of a
+ * file's content together with the config it was formatted under, so a file is recorded only when formatting it again
+ * changes nothing (a fixed point). A later run skips every file whose content and config hash is in the set: no parse,
+ * no formatting.
+ * <p>
+ * The set file is named after a hash of the formatter's own code, so any change to the formatter starts a fresh cache
+ * and the old file is deleted on the next save. The set is written once, at the end of a run, to a temporary file that
+ * is then renamed into place. The cache folder ignores itself ({@code .gitignore} containing {@code *}), so it needs no
+ * entry in anyone's {@code .gitignore}.
  */
 final class FormatCache {
 

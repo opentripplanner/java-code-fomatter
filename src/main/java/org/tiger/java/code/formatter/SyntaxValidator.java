@@ -18,10 +18,9 @@ import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 
 /**
- * Parses Java source with the JDK's own compiler front end - {@code javax.tools}/
- * {@code com.sun.source} - and reports whether it's syntactically valid, without doing any
- * semantic analysis (symbol/type resolution). That's deliberate: a formatter shouldn't need a
- * classpath, and shouldn't reject a file just because it references a type it can't resolve.
+ * Parses Java source with the JDK's own compiler front end - {@code javax.tools}/ {@code com.sun.source} - and reports
+ * whether it's syntactically valid, without doing any semantic analysis (symbol/type resolution). That's deliberate: a
+ * formatter shouldn't need a classpath, and shouldn't reject a file just because it references a type it can't resolve.
  */
 final class SyntaxValidator {
 
@@ -36,9 +35,9 @@ final class SyntaxValidator {
   }
 
   /**
-   * Parses {@code source} and returns its tree, assuming it's already known to be syntactically
-   * valid (e.g. via a prior {@link #validate(String)} call) - callers that haven't validated first
-   * should expect a possibly-incomplete tree on malformed input, not an exception.
+   * Parses {@code source} and returns its tree, assuming it's already known to be syntactically valid (e.g. via a prior
+   * {@link #validate(String)} call) - callers that haven't validated first should expect a possibly-incomplete tree on
+   * malformed input, not an exception.
    */
   static Parsed parseTree(String source) throws IOException {
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();

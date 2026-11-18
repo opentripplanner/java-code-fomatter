@@ -34,24 +34,22 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Recursively wraps specific statement shapes - variable/field declarations with an initializer,
- * plain assignment statements, {@code return}, {@code throw} - at real operator-precedence
- * boundaries, using the JDK's own AST (`com.sun.source`) rather than character scanning: a
- * hand-rolled scan cannot reliably resolve real Java grammar ambiguity (generics vs relational,
- * ternary {@code ?} vs wildcard, casts vs parens, lambdas), which is exactly the class of bug
- * {@link LineWrapper}'s simpler, flat, greedy approach is prone to.
- *
- * <p>Everything this engine doesn't specifically handle - multi-declarator statements, bare call
- * statements, control-flow headers, method signatures, annotations - is left untouched here and
- * picked up by the existing {@link LineWrapper} afterward, unchanged from its v1 behavior.
- *
- * <p>Core model: a "list" (one precedence tier's flattened operands, call arguments, chain
- * segments) either renders whole on one line or every element gets its own line - never partial
- * packing. Siblings of one list share one indent level; only when a specific list *slot* itself
- * overflows into its own (tighter) nested list does that nested list step one level deeper -
- * confirmed via a worked multi-tier bitwise cascade. A "sole occupant" position - a bracket's
- * single piece of content, a call's single argument, a unary/cast/lambda operand - is not itself a
- * multi-element list, so it reuses the level it was given rather than adding another step.
+ * Recursively wraps specific statement shapes - variable/field declarations with an initializer, plain assignment
+ * statements, {@code return}, {@code throw} - at real operator-precedence boundaries, using the JDK's own AST
+ * (`com.sun.source`) rather than character scanning: a hand-rolled scan cannot reliably resolve real Java grammar
+ * ambiguity (generics vs relational, ternary {@code ?} vs wildcard, casts vs parens, lambdas), which is exactly the
+ * class of bug {@link LineWrapper}'s simpler, flat, greedy approach is prone to.
+ * <p>
+ * Everything this engine doesn't specifically handle - multi-declarator statements, bare call statements, control-flow
+ * headers, method signatures, annotations - is left untouched here and picked up by the existing {@link LineWrapper}
+ * afterward, unchanged from its v1 behavior.
+ * <p>
+ * Core model: a "list" (one precedence tier's flattened operands, call arguments, chain segments) either renders whole
+ * on one line or every element gets its own line - never partial packing. Siblings of one list share one indent level;
+ * only when a specific list *slot* itself overflows into its own (tighter) nested list does that nested list step one
+ * level deeper - confirmed via a worked multi-tier bitwise cascade. A "sole occupant" position - a bracket's single
+ * piece of content, a call's single argument, a unary/cast/lambda operand - is not itself a multi-element list, so it
+ * reuses the level it was given rather than adding another step.
  */
 final class ExpressionWrapper {
 
@@ -78,9 +76,11 @@ final class ExpressionWrapper {
       return config.wrapAtColumn();
     }
 
-    /** A budget reduced by {@code n} columns, for reserving room for trailing punctuation
-     * (the statement-terminating `;`) that isn't part of the tree being rendered but will
-     * still land on whatever the rendering's last line turns out to be. */
+    /**
+     * A budget reduced by {@code n} columns, for reserving room for trailing punctuation (the statement-terminating
+     * `;`) that isn't part of the tree being rendered but will still land on whatever the rendering's last line turns
+     * out to be.
+     */
     Ctx reserving(int n) {
       return
         new Ctx(source, unit, positions, new FormatterConfig(Math.max(1, config.wrapAtColumn() - n), config.indent()),
@@ -244,14 +244,12 @@ final class ExpressionWrapper {
     }
 
     /**
-     * Detects `int a = 1, b = 2;`. javac gives every declarator in such a group the *same*
-     * start position (the shared type) while each one's own end cumulatively grows to cover
-     * every earlier declarator plus its own trailing comma or, for the last one, the group's
-     * closing `;` - confirmed by direct inspection, not documented API behavior. So: a comma
-     * between this node's start and its own name means an earlier declarator's tail precedes
-     * it (this is the 2nd+ declarator); a comma (rather than `;`) as the last non-whitespace
-     * character before this node's own end means there's more declarator group after it (this
-     * is the 1st/2nd+ declarator, not the last).
+     * Detects `int a = 1, b = 2;`. javac gives every declarator in such a group the *same* start position (the shared
+     * type) while each one's own end cumulatively grows to cover every earlier declarator plus its own trailing comma
+     * or, for the last one, the group's closing `;` - confirmed by direct inspection, not documented API behavior. So:
+     * a comma between this node's start and its own name means an earlier declarator's tail precedes it (this is the
+     * 2nd+ declarator); a comma (rather than `;`) as the last non-whitespace character before this node's own end means
+     * there's more declarator group after it (this is the 1st/2nd+ declarator, not the last).
      */
     private boolean isMultiDeclarator(VariableTree node) {
       String source = ctx.source();
@@ -286,8 +284,10 @@ final class ExpressionWrapper {
 
   // ---- declarator / assignment / return / throw entry points ----
 
-  /** `lhsText = rhs;` - `=` always stays with the LHS. The RHS glues right on if it's an
-   * always-glue construct (chain, bare call, unary, cast, lambda); otherwise it starts fresh. */
+  /**
+   * `lhsText = rhs;` - `=` always stays with the LHS. The RHS glues right on if it's an always-glue construct (chain,
+   * bare call, unary, cast, lambda); otherwise it starts fresh.
+   */
   private static void tryWrapDeclarator(String lhsText, Tree owner, ExpressionTree rhs, Ctx ctx, List<Edit> edits) {
     tryWrapKeywordLike(lhsText + " =", owner, rhs, ctx, edits);
   }
@@ -375,11 +375,10 @@ final class ExpressionWrapper {
   // ---- switch arms: case X -> body ----
 
   /**
-   * A `case ... -> body` arm with any line over budget puts {@code ->} at the start of its own
-   * line, one level deeper than the last label line, and the body continues from it. Block bodies
-   * are left alone (the arrow is part of the opener and there is nothing to wrap). The move is
-   * made even when the body is an atomic literal that still won't fit: it shortens the label
-   * line and makes the over-long body stand out on its own.
+   * A `case ... -> body` arm with any line over budget puts {@code ->} at the start of its own line, one level deeper
+   * than the last label line, and the body continues from it. Block bodies are left alone (the arrow is part of the
+   * opener and there is nothing to wrap). The move is made even when the body is an atomic literal that still won't
+   * fit: it shortens the label line and makes the over-long body stand out on its own.
    */
   private static void tryWrapCaseArrow(CaseTree node, Ctx ctx, List<Edit> edits) {
     if (node.getCaseKind() != CaseTree.CaseKind.RULE) {
@@ -562,17 +561,19 @@ final class ExpressionWrapper {
       || expr instanceof ConditionalExpressionTree;
   }
 
-  /** {@code text} on one line: line breaks (and the indentation after them) removed, with no space before a chain's dot. */
+  /**
+   * {@code text} on one line: line breaks (and the indentation after them) removed, with no space before a chain's dot.
+   */
   private static String collapse(String text) {
     return text.replaceAll("\\s*\\n\\s*\\.", ".").replaceAll("\\s*\\n\\s*", " ").replace("( ", "(").replace(" )", ")");
   }
 
   /**
-   * Moves an already multi-line expression to start at {@code arrowIndent} ({@code -> expression}),
-   * keeping the shape of its later lines: the first of them goes one level under the arrow and every
-   * other line is shifted by the same amount, so arguments and chain calls keep their indentation
-   * relative to each other. A final closing bracket that closes the bracket the first line opened
-   * goes back level with the arrow. Returns {@code null} for text this can't safely shift (text blocks).
+   * Moves an already multi-line expression to start at {@code arrowIndent} ({@code -> expression}), keeping the shape
+   * of its later lines: the first of them goes one level under the arrow and every other line is shifted by the same
+   * amount, so arguments and chain calls keep their indentation relative to each other. A final closing bracket that
+   * closes the bracket the first line opened goes back level with the arrow. Returns {@code null} for text this can't
+   * safely shift (text blocks).
    */
   private static List<String> shiftBody(String text, int arrowIndent, int indentWidth) {
     if (text.contains("\"\"\"")) {
@@ -629,8 +630,10 @@ final class ExpressionWrapper {
     });
   }
 
-  /** `for (Type v : expr) {`: the whole `Type v : expr` on one line if it fits one level in,
-   * else `Type v` followed by `: expr` on the next line, level with it. */
+  /**
+   * `for (Type v : expr) {`: the whole `Type v : expr` on one line if it fits one level in, else `Type v` followed by
+   * `: expr` on the next line, level with it.
+   */
   private static void tryWrapForEachHeader(EnhancedForLoopTree node, Ctx ctx, List<Edit> edits) {
     int ownerStart = ctx.start(node);
     int open = ctx.source().indexOf('(', ownerStart);
@@ -715,9 +718,9 @@ final class ExpressionWrapper {
   }
 
   /**
-   * Rewrites the header's parenthesised part {@code ( ... )} (offsets {@code open}..{@code close}
-   * inclusive) as {@code (\n<content>\n<level indent>)} when the line holding it is over
-   * budget and the rewrite actually shortens the worst line.
+   * Rewrites the header's parenthesised part {@code ( ... )} (offsets {@code open}..{@code close} inclusive) as
+   * {@code (\n<content>\n<level indent>)} when the line holding it is over budget and the rewrite actually shortens the
+   * worst line.
    */
   private static void tryWrapHeader(int ownerStart, int open, int close, Ctx ctx, List<Edit> edits,
         java.util.function.IntFunction<List<String>> content) {
@@ -770,10 +773,9 @@ final class ExpressionWrapper {
   }
 
   /**
-   * The level to hand {@link #render} for {@code expr} starting on a line at {@code lineLevel}. A lone
-   * call ({@code foo(...)}) or {@code new Type(...)} puts its arguments one level under its own line, so it
-   * takes the line's level; everything else (a chain's dots, an operator cascade) is rendered one level
-   * deeper than the line.
+   * The level to hand {@link #render} for {@code expr} starting on a line at {@code lineLevel}. A lone call
+   * ({@code foo(...)}) or {@code new Type(...)} puts its arguments one level under its own line, so it takes the line's
+   * level; everything else (a chain's dots, an operator cascade) is rendered one level deeper than the line.
    */
   private static int levelFor(ExpressionTree expr, int lineLevel) {
     boolean loneCall = expr instanceof MethodInvocationTree call && collectChain(call).size() == 1;
@@ -781,7 +783,9 @@ final class ExpressionWrapper {
     return loneCall || plainNew ? lineLevel : lineLevel + 1;
   }
 
-  /** A call statement ({@code foo(a, b);}, {@code a.b().c();}) with a line over budget: rendered like any other call. */
+  /**
+   * A call statement ({@code foo(a, b);}, {@code a.b().c();}) with a line over budget: rendered like any other call.
+   */
   private static void tryWrapBareCall(ExpressionStatementTree statement, MethodInvocationTree call, Ctx ctx,
     List<Edit> edits) {
     int ownerStart = ctx.start(statement);
@@ -837,8 +841,8 @@ final class ExpressionWrapper {
   }
 
   /**
-   * Whether {@code [start, end)} holds a comment. The AST-based rendering rebuilds text from
-   * its nodes, which carry no comments, so rewriting such a span would silently delete them.
+   * Whether {@code [start, end)} holds a comment. The AST-based rendering rebuilds text from its nodes, which carry no
+   * comments, so rewriting such a span would silently delete them.
    */
   private static boolean containsComment(Ctx ctx, int start, int end) {
     for (int i = start; i < end; i++) {
@@ -862,9 +866,11 @@ final class ExpressionWrapper {
     return nl == -1 ? source.length() : nl;
   }
 
-  /** Whether any single physical line in {@code [rangeStart, rangeEnd]} exceeds the budget -
-   * a multi-line statement (e.g. one with a text-block initializer) must be checked line by
-   * line, since the raw distance between its start and end isn't a meaningful column count. */
+  /**
+   * Whether any single physical line in {@code [rangeStart, rangeEnd]} exceeds the budget - a multi-line statement
+   * (e.g. one with a text-block initializer) must be checked line by line, since the raw distance between its start and
+   * end isn't a meaningful column count.
+   */
   private static boolean anyLineExceedsBudget(Ctx ctx, int rangeStart, int rangeEnd) {
     String source = ctx.source();
     int lineStart = rangeStart;
@@ -914,11 +920,10 @@ final class ExpressionWrapper {
   }
 
   /**
-   * Renders {@code expr} to be placed right after {@code columnUsed} characters already on the
-   * current line (the first returned line carries no leading indent of its own - the caller
-   * glues it on). {@code level} is the indent level a *new* list this construct introduces
-   * should use directly (no further +1 here - only a list's own slot-overflow recursion adds a
-   * level, see {@link #renderBinaryCascade}). Returns a single verbatim line when it fits.
+   * Renders {@code expr} to be placed right after {@code columnUsed} characters already on the current line (the first
+   * returned line carries no leading indent of its own - the caller glues it on). {@code level} is the indent level a
+   * *new* list this construct introduces should use directly (no further +1 here - only a list's own slot-overflow
+   * recursion adds a level, see {@link #renderBinaryCascade}). Returns a single verbatim line when it fits.
    */
   private static List<String> render(ExpressionTree expr, int columnUsed, int level, Ctx ctx) {
     String verbatim = ctx.text(expr);
@@ -1001,15 +1006,13 @@ final class ExpressionWrapper {
 
   /**
    * Renders a chain of precedence-tier lists reached by repeatedly drilling into slot 0 (e.g.
-   * {@code aaaa & bbbb ^ cccc | dddd} fully expanding). Confirmed via a worked multi-tier bitwise
-   * example that levels number top-down, outermost to innermost: this call's own tier (layer 0,
-   * the loosest-precedence operator actually being split) uses {@code level} directly for its own
-   * non-first siblings, exactly like any other list, and each *nested* layer reached by drilling
-   * into slot 0 - a tighter-precedence operator, further inside the expression - steps one level
-   * deeper still ({@code level + 1}, {@code level + 2}, ...), same as any other bracket's content.
-   * This is two-phase: first walk down collecting one layer per tier actually drilled through
-   * (stopping the moment a layer's slot 0 fits verbatim, or isn't a further-flattenable binary
-   * tree), then render each layer at its now-known level.
+   * {@code aaaa & bbbb ^ cccc | dddd} fully expanding). Confirmed via a worked multi-tier bitwise example that levels
+   * number top-down, outermost to innermost: this call's own tier (layer 0, the loosest-precedence operator actually
+   * being split) uses {@code level} directly for its own non-first siblings, exactly like any other list, and each
+   * *nested* layer reached by drilling into slot 0 - a tighter-precedence operator, further inside the expression -
+   * steps one level deeper still ({@code level + 1}, {@code level + 2}, ...), same as any other bracket's content. This
+   * is two-phase: first walk down collecting one layer per tier actually drilled through (stopping the moment a layer's
+   * slot 0 fits verbatim, or isn't a further-flattenable binary tree), then render each layer at its now-known level.
    */
   private static List<String> renderBinaryCascade(BinaryTree top, int columnUsed, int level, Ctx ctx) {
     List<List<OperandSlot>> layers = new ArrayList<>();
@@ -1052,7 +1055,10 @@ final class ExpressionWrapper {
     return out;
   }
 
-  /** A sole-occupant operand (unary/cast/lambda body): no sibling to disambiguate from, so it reuses {@code level} directly. */
+  /**
+   * A sole-occupant operand (unary/cast/lambda body): no sibling to disambiguate from, so it reuses {@code level}
+   * directly.
+   */
   private static List<String> renderPrefixed(String prefix, ExpressionTree operand, int columnUsed, int level,
     Ctx ctx) {
     List<String> rendered = render(operand, columnUsed + prefix.length(), level, ctx);
@@ -1062,7 +1068,10 @@ final class ExpressionWrapper {
     return out;
   }
 
-  /** `open` glued to whatever precedes it (at {@code level}); its sole content always steps one level deeper (a bracket's content is never at the bracket's own level); `close` back at {@code level}. */
+  /**
+   * `open` glued to whatever precedes it (at {@code level}); its sole content always steps one level deeper (a
+   * bracket's content is never at the bracket's own level); `close` back at {@code level}.
+   */
   private static List<String> renderBracketed(String open, ExpressionTree content, String close, int columnUsed,
     int level, Ctx ctx) {
     List<String> out = new ArrayList<>();
@@ -1221,10 +1230,11 @@ final class ExpressionWrapper {
     return out;
   }
 
-  /** `name(` glued to whatever precedes it; arguments always step one level deeper than `name(`
-   * itself (never the call's own level - a call's content is never at the call's own level, same
-   * as any bracket), strictly one per line with no trailing comma when there's more than one;
-   * `)` back at `name(`'s own level. */
+  /**
+   * `name(` glued to whatever precedes it; arguments always step one level deeper than `name(` itself (never the call's
+   * own level - a call's content is never at the call's own level, same as any bracket), strictly one per line with no
+   * trailing comma when there's more than one; `)` back at `name(`'s own level.
+   */
   private static List<String> renderCall(String name, List<? extends ExpressionTree> args, int columnUsed, int level,
     Ctx ctx) {
     if (args.isEmpty()) {

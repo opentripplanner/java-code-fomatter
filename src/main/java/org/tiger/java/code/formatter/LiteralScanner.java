@@ -4,10 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Hand-rolled, character-level scan of Java source that locates every comment, character literal,
- * string literal and text block, without building a full token stream or AST. {@link ScopeReindenter}
- * and {@link LineWrapper} use the result to avoid ever reindenting or splitting inside one of these
- * "verbatim" spans.
+ * Hand-rolled, character-level scan of Java source that locates every comment, character literal, string literal and
+ * text block, without building a full token stream or AST. {@link ScopeReindenter} and {@link LineWrapper} use the
+ * result to avoid ever reindenting or splitting inside one of these "verbatim" spans.
  */
 final class LiteralScanner {
 
@@ -94,10 +93,9 @@ final class LiteralScanner {
   }
 
   /**
-   * Scans a single- or double-quoted literal starting at the opening quote, honoring backslash
-   * escapes, and returns the offset right after the closing quote. Classic string/char literals
-   * cannot legally contain a raw newline, so an unterminated literal is closed at the end of its
-   * line rather than consuming the rest of the file.
+   * Scans a single- or double-quoted literal starting at the opening quote, honoring backslash escapes, and returns the
+   * offset right after the closing quote. Classic string/char literals cannot legally contain a raw newline, so an
+   * unterminated literal is closed at the end of its line rather than consuming the rest of the file.
    */
   private static int scanQuoted(String source, int start, char quote) {
     int n = source.length();
@@ -121,9 +119,9 @@ final class LiteralScanner {
   }
 
   /**
-   * Scans a text block starting at its opening {@code """}. The closing delimiter is the first
-   * run of three or more unescaped double quotes encountered after the opening line (JLS 3.10.6):
-   * the first three quotes of that run close the block, even if more immediately follow.
+   * Scans a text block starting at its opening {@code """}. The closing delimiter is the first run of three or more
+   * unescaped double quotes encountered after the opening line (JLS 3.10.6): the first three quotes of that run close
+   * the block, even if more immediately follow.
    */
   private static int scanTextBlock(String source, int start) {
     int n = source.length();

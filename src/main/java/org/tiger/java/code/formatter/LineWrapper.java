@@ -4,15 +4,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Wraps lines over a configured column budget at safe token boundaries: a top-level comma when one
- * fits, otherwise a binary/logical operator or method-chain {@code .}, walking bracket depth
- * outward-in so a nested (e.g. lambda parameter) comma is tried before giving up on commas
- * altogether. A line with no safe break point - or one that's wholly inside a string/text block -
- * is left untouched and reported rather than corrupted; the caller decides what to do with that.
- *
- * <p>Runs as a post-pass over {@link ScopeReindenter}'s output, reusing the same
- * {@link LiteralScanner} so a break never lands inside a comment, character/string literal or text
- * block, and never lands inside or after a trailing line comment.
+ * Wraps lines over a configured column budget at safe token boundaries: a top-level comma when one fits, otherwise a
+ * binary/logical operator or method-chain {@code .}, walking bracket depth outward-in so a nested (e.g. lambda
+ * parameter) comma is tried before giving up on commas altogether. A line with no safe break point - or one that's
+ * wholly inside a string/text block - is left untouched and reported rather than corrupted; the caller decides what to
+ * do with that.
+ * <p>
+ * Runs as a post-pass over {@link ScopeReindenter}'s output, reusing the same {@link LiteralScanner} so a break never
+ * lands inside a comment, character/string literal or text block, and never lands inside or after a trailing line
+ * comment.
  */
 final class LineWrapper {
 
@@ -90,9 +90,8 @@ final class LineWrapper {
   }
 
   /**
-   * Splits one over-length line into fragments, or returns {@code null} if no safe break point
-   * exists anywhere in it (a wholly-verbatim line, or one with no comma/operator candidate that
-   * fits the column budget).
+   * Splits one over-length line into fragments, or returns {@code null} if no safe break point exists anywhere in it (a
+   * wholly-verbatim line, or one with no comma/operator candidate that fits the column budget).
    */
   private static List<String> wrapLine(LiteralScanner.Scan scan, int rangeStart, int rangeEnd, int depthAtStart,
     int maxColumns, int indentWidth) {
@@ -238,10 +237,9 @@ final class LineWrapper {
   }
 
   /**
-   * If the {@code '<'} at {@code i} opens a generic argument list - it directly follows an
-   * identifier (or a {@code '.'}, as in {@code Foo.<T>bar()}) and everything up to its matching
-   * {@code '>'} is type-name text - returns the index just past that {@code '>'}; otherwise
-   * {@code -1}. A spaced comparison ({@code a < b}) never matches.
+   * If the {@code '<'} at {@code i} opens a generic argument list - it directly follows an identifier (or a
+   * {@code '.'}, as in {@code Foo.<T>bar()}) and everything up to its matching {@code '>'} is type-name text - returns
+   * the index just past that {@code '>'}; otherwise {@code -1}. A spaced comparison ({@code a < b}) never matches.
    */
   /**
    * Whether the {@code '<'} at {@code i} follows a declaration modifier ({@code public static <T extends X>
@@ -339,11 +337,10 @@ final class LineWrapper {
   }
 
   /**
-   * Among candidates, walks depth outward-in (shallowest first); at each depth level picks the
-   * candidate with the largest position that still fits the column budget. {@code afterToken}
-   * selects comma semantics (break kept with the preceding text, right after it) versus
-   * operator/dot semantics (break moves to the start of the continuation, trailing whitespace on
-   * the kept side trimmed).
+   * Among candidates, walks depth outward-in (shallowest first); at each depth level picks the candidate with the
+   * largest position that still fits the column budget. {@code afterToken} selects comma semantics (break kept with the
+   * preceding text, right after it) versus operator/dot semantics (break moves to the start of the continuation,
+   * trailing whitespace on the kept side trimmed).
    */
   private static BreakPoint bestByDepth(String source, List<Candidate> candidates, int rangeStart, int columnOffset,
     boolean afterToken, int maxColumns) {

@@ -23,19 +23,19 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Puts a blank line before and after every multi-line, brace-bodied block: type declarations,
- * methods and constructors with a body, initializers, and {@code if}, {@code for}, {@code while},
- * {@code do}, {@code switch}, {@code try} and {@code synchronized} statements.
- *
- * <p>The blank line before goes above whatever is attached to the block - a run of comment lines
- * (Javadoc included) directly above it, and its annotations - never between them and it. No blank
+ * Puts a blank line before and after every multi-line, brace-bodied block: type declarations, methods and constructors
+ * with a body, initializers, and {@code if}, {@code for}, {@code while}, {@code do}, {@code switch}, {@code try} and
+ * {@code synchronized} statements.
+ * <p>
+ * The blank line before goes above whatever is attached to the block - a run of comment lines (Javadoc included)
+ * directly above it, and its annotations - never between them and it. No blank
+ * <p>
  * line is added right after an opening {@code {}, at the start of a file, after a {@code case}
  * label or a statement label; none is added after a block when a closing {@code }}/{@code )}/
- * {@code ]} or a {@code case}/{@code default} label follows. {@code else if} chains,
- * {@code catch}/{@code finally} and a {@code do}'s {@code while} are part of their block. Blocks
- * with no braces ({@code if (x) return;}), blocks that fit on one line, lambda and anonymous-class
- * bodies, and bodiless methods are left out. An existing blank line is kept, and a second one is
- * never created.
+ * {@code ]} or a {@code case}/{@code default} label follows. {@code else if} chains, {@code catch}/{@code finally} and
+ * a {@code do}'s {@code while} are part of their block. Blocks with no braces ({@code if (x) return;}), blocks that fit
+ * on one line, lambda and anonymous-class bodies, and bodiless methods are left out. An existing blank line is kept,
+ * and a second one is never created.
  */
 final class BlankLineFormatter {
 
