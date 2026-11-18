@@ -1,186 +1,223 @@
-# java-code-fomatter
+# Java code formatter
 
-Format Java source files using operator precedence and scope.
+Most people do not read code like a novel, more like an encyclopedia. They scan it from top to bottom, and only then
+from left to right. Therefore, scanning down the file should be fast and provide the reader with easy access to the
+structure of the code. This formatter is built for that.
 
-It reindents by brace nesting, and wraps over-long lines two ways: variable/
-field declarations, plain assignments, `return` and `throw` are wrapped at
-real operator-precedence boundaries (`ExpressionWrapper`); everything else
-still over budget falls back to a flat, greedy token-boundary wrap
-(`LineWrapper`). Control-flow headers, switch arms and trailing comments are
-handled too, and blank lines go around every brace-bodied block. It does not
-yet touch general token spacing, or extend precedence-aware wrapping to method
-signatures or annotations - see [Known limitations](#known-limitations).
+Scope matters, code that has the same scope should have the same indention - either all on one line or all siblings 
+listed in one column. Important information goes _first_ on the line so you do not have to scan to the end to see it! 
+For example operators go first on a wrapped line, so the left edge reads as a list of what is being combined. A line
+that is too long is broken where the expression itself divides: at the operator that binds the weakest (`+` before `*`),
+not at the last space before the column limit. Each part then gets its own line, indented one level. 
 
-## Requirements
+- Javadoc and comments are formatted too.
+- It is fast(only changes are scanned)
+- It is built to run in CI
+- It is safe, and it can never change what your program does.
 
-- JDK 25 or newer.
 
-## Usage
+```java
+// before: one 160-character line
+String message = "Order " + order.id() + " for customer " + customer.name() + " was placed at " + clock.now() + " and is pending";
 
-```bash
-java -m org.tiger.java.code.formatter <file-or-dir>...            # print formatted output to stdout
-java -m org.tiger.java.code.formatter -w <file-or-dir>...         # rewrite files in place
-java -m org.tiger.java.code.formatter -w --changed                # only what git reports as changed or untracked
-java -m org.tiger.java.code.formatter --check <file-or-dir>...    # list what would change; exit 1 if anything would
+// after
+String message =
+  "Order "
+  + order.id()
+  + " for customer "
+  + customer.name()
+  + " was placed at "
+  + clock.now()
+  + " and is pending";
 ```
 
-A directory means every `.java` file under it - in a git repository, the tracked
-and untracked-but-not-ignored ones. Files are formatted in parallel, and a file
-that is already formatted is not rewritten.
+## Why use it
 
-| Option         | Meaning                                                                  |
-| -------------- | ------------------------------------------------------------------------ |
-| `-w`, `--write`| Rewrite files in place instead of printing the result                    |
-| `--check`      | Write nothing; print `would reformat: <file>` for every file that would change and exit 1 if there are any |
-| `--changed`    | Also format the files `git` reports as modified or untracked (needs git) |
-| `--no-cache`   | Ignore and do not update the cache                                       |
-| `-v`           | Print a one-line summary (formatted / already formatted / skipped / failed) |
+- **Fast.** Files run in parallel, and a content-hash cache skips files that are already formatted. A repeat check of all
+  OTP's modules, about 4,300 files, takes about a second.
+- **Made for builds.** `--check` fails the build when a file is not formatted. A Maven plugin and a Java API are
+  included. See [Maven](maven-plugin/README.md), [Jenesis](docs/jenesis.md) and the [API](docs/api.md).
+- **Format Javadoc and comments as well.** `<p>` tags, blank lines before `@param`, hanging indents and line fill are
+  all handled, and each rule can be switched off. See [Comments and Javadoc](docs/comments.md).
+- **One small config file.** Two keys cover most projects, and the file is layered per directory. See
+  [Configuration](docs/configuration.md).
 
-The formatter first validates that a file is syntactically correct Java
-(without resolving its classpath) and leaves it untouched, reporting
-diagnostics, if it isn't. If a line still exceeds the configured column limit
-after reindenting and wrapping and has no safe break point (e.g. it's a single
-long string literal or a text-block line), it's left unchanged and reported
-rather than corrupted. Such a line is a warning and never fails a run.
+## Quick start
 
-Exit codes: `0` when every file is formatted (or, with `--check`, none would change); `1` when a file failed (it is not
-valid Java, or could not be read or written) or, with `--check`, when a file would change; `2` for a usage error.
+You need JDK 25 or newer.
 
-Before any output is written, the formatter checks that it has the same tokens as the input, ignoring whitespace and
-comments, so a bug in the formatter can never change what a program does; if the check fails, the file is left alone and
-reported as an internal error.
+```bash
+# print the formatted result
+java -m org.tiger.java.code.formatter src/main/java/Foo.java
 
-To use it in a Maven build, see [maven-plugin](maven-plugin/README.md). The same operations are available as a Java API
-in `FormatRun`.
+# rewrite a whole tree in place
+java -m org.tiger.java.code.formatter -w src
 
-### Configuration
+# CI: list the files that need formatting and exit 1 if there are any
+java -m org.tiger.java.code.formatter --check src
+```
 
-Put a `.jcf/config.properties` file in your project:
+Add `.jcf/config.properties` at the root of your repository to choose the width and indent:
 
 ```properties
 wrapAtColumn=100
 indent=2
 ```
 
-| Key            | Default | Meaning                                              |
-| -------------- | ------- | ----------------------------------------------------- |
-| `wrapAtColumn` | `120`   | Column at which a line gets wrapped                    |
-| `indent`       | `4`     | Spaces per indent level, used everywhere (scope, wrapped lines, and each precedence-tier step) |
+All options are in the [command line reference](docs/cli.md).
 
-`commentRules` switches the comment rules (default `all`; or `none`, or a comma-separated list):
+## Maven Setup
 
-| Rule | What it does |
-| ---- | ------------ |
-| `wrap` | Wraps Javadoc and `///` lines that are over the limit. Lines are split, never joined. |
-| `paragraphs` | Every paragraph tag form (`<p>`, `<P>`, `<p/>`, `<p />`, `<p>Text`, a mid-line `<p>`) becomes one `<p>` on its own line; a blank line between two paragraphs becomes `<p>`; a closing `</p>` and a `<p>` before an HTML block are dropped. |
-| `blank-lines` | One blank line before the first block tag (`@param`, ...) and before headings; blank edges trimmed. |
-| `indent` | Continuation lines of block tags and list items get a hanging indent. |
-| `fill` | Joins lines broken too early and refills each line up to the limit. Includes all four rules above. |
-| `line-comments` | Wraps own-line `//` comments that are over the limit. |
+Bind the plugin once. `format` rewrites files, `check` fails the build when a file is not formatted.
 
-Each rule changes only what it owns: with `commentRules=wrap`, nothing but over-long lines is touched.
-
-The config is found **per file**: the `.jcf/config.properties` of every
-directory from the file's own directory up to the *outermost repository root*
-(the topmost ancestor with a `.git` entry - a directory, or the file a
-submodule or worktree has) are layered, and a nearer file overrides only the
-keys it sets, inheriting the rest. A module or submodule can therefore override
-the root's settings. Outside a repository only the file's own directory
-counts. The formatter only reads configs where they already exist; it never
-creates a `.jcf` folder in a source directory. No config means the defaults
-apply.
-
-### Cache
-
-A run records every file it finds already formatted - a hash of its content and
-its effective config - in `<repository root>/.jcf/cache`. A later run skips those
-files without parsing or formatting them, so re-running on an unchanged tree
-takes a fraction of a second, and after an edit only the edited files are
-formatted. The cache is keyed by content, so it survives branch switches, and
-it is thrown away whenever the formatter itself changes. The folder ignores
-itself (it holds a `.gitignore` containing `*`), so it needs no entry in your
-`.gitignore`; it is safe to delete at any time, and `--no-cache` bypasses it.
-
-## Build tool
-
-This project uses [Jenesis](https://jenesis.build/), a Java-native build tool
-whose engine is vendored directly into the repo under `build/jenesis/` as
-plain Java source (no wrapper binaries or background daemons).
-
-### One-time setup
-
-Jenesis itself is not committed yet. Bootstrap it once with:
-
-```bash
-curl -fsSL https://get.jenesis.build | bash
+```xml
+<plugin>
+  <groupId>org.tiger.java.code</groupId>
+  <artifactId>formatter-maven-plugin</artifactId>
+  <version>1-SNAPSHOT</version>
+  <executions>
+    <execution>
+      <id>format</id>
+      <phase>validate</phase>
+      <goals>
+        <goal>format</goal>
+      </goals>
+    </execution>
+  </executions>
+</plugin>
 ```
 
-This vendors the build engine into `build/jenesis/`. Commit that directory
-after running it.
+On a CI server use the `check` goal instead. Formatting rules come from `.jcf/config.properties`, not from the pom, so
+your editor, the command line and Maven always agree. The plugin needs Maven to run on JDK 25 or newer. All
+parameters are in the [Maven plugin guide](maven-plugin/README.md).
 
-### Common commands
+## Use it with Jenesis
 
-```bash
-jenesis
-jenesis-exec
-java build/jenesis/Make.java              # compile, test, and package
-java build/jenesis/Make.java stage        # prepare a release tree
-java build/jenesis/Make.java dependencies # show resolved dependencies
-java build/jenesis/Make.java pin          # resolve and record dependency checksums
+This project is built with [Jenesis](https://jenesis.build/), and the formatter is a plain Java module. You can call it
+from a test, so `java build/jenesis/Make.java` fails when a source file is not formatted:
+
+```java
+@Test
+void sourcesAreFormatted() {
+  var report = FormatRun.run(FormatRun.javaFilesUnder(Path.of("src")), FormatRun.Mode.CHECK, true);
+
+  assertTrue(report.failed().isEmpty() && report.changed().isEmpty(), "run the formatter with -w");
+}
 ```
 
-## Testing
+See [Jenesis](docs/jenesis.md) for the full setup.
 
-Tests live in `src/test/java/`, wired as a Jenesis `@jenesis.test` module
-against JUnit 5. `FormatterGoldenFileTest` is a single data-driven test over
-every
-`src/test/java/resources/format-cases/<name>/{Input.java.txt,Expected.java.txt}`
-pair: growing coverage is adding a fixture directory, not writing code. Each
-case also gets a free idempotency check - formatting `Expected.java.txt` again
-must be a no-op. Fixtures use a `.java.txt` extension rather than `.java`,
-since Jenesis compiles any `.java` file under `src/test/java` as real source.
+## How it differs from google-java-format and Prettier
 
-All cases share `src/test/java/cases/.jcf/config.properties` (`wrapAtColumn=60`),
-the same file format as a real `.jcf/config.properties` - a narrower
-column budget keeps fixtures short and readable.
+All three give good results. They differ in a few places that you notice every day. The code below is real output from
+google-java-format 1.36.1 and prettier-java 2.10.3 (prettier 3.9.6, width 100, 2 spaces), the versions
+OpenTripPlanner uses.
 
-`java build/jenesis/Make.java` compiles, tests, and packages both modules, so
-running the suite needs no separate command.
+**A long condition.** Prettier ends the line with `&&`. google-java-format keeps `if (` glued to the first operand.
+This formatter puts every operand in the same column, and the operator first.
 
-## Known limitations
+```java
+// this formatter
+if (
+  order.isPaid()
+  && customer.hasVerifiedEmail()
+  && !customer.isBlocked()
+  && order.total() > customer.creditLimit()
+) {
 
-Deliberately narrow. In particular:
+// google-java-format
+if (order.isPaid()
+    && customer.hasVerifiedEmail()
+    && !customer.isBlocked()
+    && order.total() > customer.creditLimit()) {
 
-- **Brace-less control-flow bodies aren't specially indented.** `if (x)\n
-  foo();` has no brace to encode its nesting, so its body is indented at the
-  same depth as the `if` itself - including flattening a body a human had
-  already indented correctly. Adding braces automatically is a natural next
-  step, deferred for now.
-- **Precedence-aware wrapping only covers declarations, plain assignments,
-  `return` and `throw`.** `if`/`while`/`for` conditions, method parameter and
-  `throws` lists, and annotation arguments still use the older flat wrapper -
-  a complex condition sitting next to a nicely-wrapped assignment can look
-  formatted by two different algorithms until this is widened.
-- **Multi-declarator statements** (`int a = 1, b = 2;`) aren't covered by the
-  precedence-aware wrapper either - same flat-wrapper fallback.
-- **Generic type-argument commas (`Map<String, List<Integer>>`) aren't tracked
-  as a bracket kind** by the flat wrapper, so they may read as the same depth
-  as their enclosing call - a readability blind spot, not a correctness bug.
-- **A line wholly inside a text block or string literal that's still over the
-  column limit is left as-is and reported** - it cannot be safely wrapped
-  without changing its value.
-- A wrapping decision that wouldn't actually shorten the longest resulting
-  line is skipped - the statement is left as-is rather than split for no
-  benefit.
-- A method chain's first call is always split onto its own line
-  (`a.stream()` never stays glued to the receiver); an opt-in to keep it
-  glued is designed but not implemented yet.
-- `switch` case bodies aren't given special per-case indentation.
-- A multi-line comment's interior lines keep their indentation *relative to*
-  the comment's own opening line (so a javadoc's conventional `" * "`
-  alignment survives a depth change) rather than being reindented from
-  scratch - a comment that was already misindented relative to its own
-  opener stays that way, just shifted.
-- Column width is measured as `String.length()` (UTF-16 units), not display
-  width.
+// Prettier
+if (
+  order.isPaid() &&
+  customer.hasVerifiedEmail() &&
+  !customer.isBlocked() &&
+  order.total() > customer.creditLimit()
+) {
+```
 
+**A long `case`.** Prettier explodes the labels, one per line, and the body ends up glued to the last label. This
+formatter keeps the labels as you wrote them and puts `->` on its own line, so the long body stands out.
+
+```java
+// this formatter
+case NEW, PENDING_PAYMENT, PENDING_SHIPMENT, PENDING_CONFIRMATION_FROM_CUSTOMER
+  -> "Order is still waiting for something to happen";
+
+// google-java-format
+case NEW, PENDING_PAYMENT, PENDING_SHIPMENT, PENDING_CONFIRMATION_FROM_CUSTOMER ->
+    "Order is still waiting for something to happen";
+
+// Prettier
+case
+  NEW,
+  PENDING_PAYMENT,
+  PENDING_SHIPMENT,
+  PENDING_CONFIRMATION_FROM_CUSTOMER -> "Order is still waiting for something to happen";
+```
+
+**Trailing comments.** Prettier and google-java-format leave `int count = 0; // retries` where it is. This formatter
+moves the comment to its own line above (tool markers such as `NOSONAR` stay), so that a long line never pushes the
+comment off the screen.
+
+**Blank lines.** This formatter always puts one blank line before and after a multi-line block (`if`, `for`,
+`switch`, `try`, methods, types). The other two do not add them.
+
+**Javadoc.** Prettier does not touch Javadoc, so `<p>` in the middle of a line and a 130-character line stay as
+they are. google-java-format and this formatter both rewrite it. They differ in the paragraph tag: google-java-format
+writes `<p>Text` on one line after a blank line, this formatter writes `<p>` alone on its line.
+
+```java
+// this formatter
+/**
+ * Finds the thing.
+ * <p>
+ * Second paragraph that is quite long and goes well past the column limit so it has to be wrapped
+ * somewhere.
+ *
+ * @param id the id
+ */
+
+// google-java-format
+/**
+ * Finds the thing.
+ *
+ * <p>Second paragraph that is quite long and goes well past the column limit so it has to be
+ * wrapped somewhere.
+ *
+ * @param id the id
+ */
+```
+
+**Where it is the same.** All three put each call of a long method chain on its own line. The only difference is
+the first call: google-java-format keeps `customers.stream()` together, the other two split it.
+
+The full sample, with all three outputs side by side, is in [the comparison](docs/comparison.md), together with an
+honest list of what this formatter does *not* do yet.
+
+## Status
+
+The formatter replaces Prettier for the Java layout of a project that is already formatted. It does **not** yet
+normalize the spacing inside a line (`int   a=1,b=2;` stays as written), so on messy input run a spacing tool first.
+Markdown, JSON and GraphQL are not formatted. Static analysis, such as removing unused imports, is left to other tools
+(Spotless and Checkstyle). See [Limitations](docs/limitations.md).
+
+## Documentation
+
+| Document | What is in it |
+| -------- | ------------- |
+| [Command line](docs/cli.md) | Options, exit codes, output and the cache |
+| [Configuration](docs/configuration.md) | `.jcf/config.properties`, layering, all keys |
+| [Style guide](docs/style.md) | Every layout rule, with examples |
+| [Comments and Javadoc](docs/comments.md) | The comment rules and how to switch them |
+| [Safety](docs/safety.md) | Validation, the token check, what happens on failure |
+| [Maven plugin](maven-plugin/README.md) | Goals, parameters, source roots, releasing |
+| [Jenesis](docs/jenesis.md) | Running the formatter in a Jenesis build |
+| [Java API](docs/api.md) | `FormatRun` and `SourceFormatter` |
+| [Comparison](docs/comparison.md) | Side by side with google-java-format and Prettier |
+| [Limitations](docs/limitations.md) | What it does not do yet |
+| [Development](docs/development.md) | Build, tests and fixtures |
