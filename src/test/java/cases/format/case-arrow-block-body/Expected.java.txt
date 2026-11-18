@@ -1,0 +1,19 @@
+class A {
+    Object f(Mode mode, Time timeConfig) {
+        return switch (mode) {
+            case NONE -> switch (timeConfig) {
+                case USE_TIMETABLE -> comparatorTimetable();
+                case USE_ARRIVAL_TIME
+                    -> comparatorStandardArrivalTime();
+                default
+                    -> comparatorStandardDepartureTime();
+            };
+            case SOME -> new Runnable() {
+                public void run() {
+                    go();
+                }
+            };
+            default -> null;
+        };
+    }
+}

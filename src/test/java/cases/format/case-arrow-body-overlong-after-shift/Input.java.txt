@@ -1,0 +1,12 @@
+class A {
+    Object f(Source sourceType) {
+        return switch (sourceType) {
+            case LIIPI_SOURCE -> new Parameters(
+                updaterRef,
+                c.of("u").since(V2).summary("URL.").asString(null),
+                feedId
+            );
+            default -> null;
+        };
+    }
+}

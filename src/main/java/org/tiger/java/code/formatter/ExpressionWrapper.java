@@ -427,7 +427,10 @@ final class ExpressionWrapper {
             .replace("( ", "(")
             .replace(" )", ")")
             + (body instanceof ExpressionTree ? ";" : "");
-    boolean oneLineWouldOverflow = caseIndent + collapsed.length() > ctx.wrapAtColumn();
+    // A body with braces (a switch expression, a block lambda, an anonymous class) can't be written on
+    // one line, so only a line that is really too long counts for those.
+    boolean bodyHasBraces = source.substring(ctx.start(body), bodyEnd).contains("{");
+    boolean oneLineWouldOverflow = !bodyHasBraces && caseIndent + collapsed.length() > ctx.wrapAtColumn();
 
     if (!oneLineWouldOverflow && !anyLineExceedsBudget(ctx, lineStart, lineEndOf(source, bodyEnd))) {
       return;
@@ -503,6 +506,19 @@ final class ExpressionWrapper {
         if (rendered == null) {
           return;
         }
+
+        // The shift can push a line over the limit; then lay the body out afresh (if that is
+        // better) instead of leaving the line to the flat fallback wrapper.
+        int column = arrowIndent + lead.length();
+        int shiftedWorst = worstWidth(rendered, column);
+
+        if (shiftedWorst > ctx.wrapAtColumn() && isRenderable(expression)) {
+          List<String> fresh = render(expression, column, levelFor(expression, arrowIndent / w), ctx.reserving(1));
+
+          if (worstWidth(fresh, column) < shiftedWorst) {
+            rendered = fresh;
+          }
+        }
       }
     } else {
       rendered = render(
@@ -525,6 +541,25 @@ final class ExpressionWrapper {
     }
 
     edits.add(new Edit(caseStart, bodyEnd, replacement.toString()));
+  }
+
+  /** The widest line of {@code lines}, the first one starting at {@code firstColumn}, plus the closing {@code ;}. */
+  private static int worstWidth(List<String> lines, int firstColumn) {
+    int worst = 0;
+
+    for (int i = 0; i < lines.size(); i++) {
+      worst = Math.max(worst, (i == 0 ? firstColumn : 0) + lines.get(i).length() + (i == lines.size() - 1 ? 1 : 0));
+    }
+
+    return worst;
+  }
+
+  /** Whether {@link #render} lays {@code expr} out itself (a call, chain, {@code new}, cascade or ternary). */
+  private static boolean isRenderable(ExpressionTree expr) {
+    return expr instanceof MethodInvocationTree
+      || expr instanceof NewClassTree nct && isPlainNew(nct)
+      || expr instanceof BinaryTree bt && tierOf(bt.getKind()) >= 0
+      || expr instanceof ConditionalExpressionTree;
   }
 
   /** {@code text} on one line: line breaks (and the indentation after them) removed, with no space before a chain's dot. */
