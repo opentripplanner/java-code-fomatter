@@ -6,9 +6,10 @@ It reindents by brace nesting, and wraps over-long lines two ways: variable/
 field declarations, plain assignments, `return` and `throw` are wrapped at
 real operator-precedence boundaries (`ExpressionWrapper`); everything else
 still over budget falls back to a flat, greedy token-boundary wrap
-(`LineWrapper`). It does not yet touch general token spacing, or extend
-precedence-aware wrapping to control-flow headers, method signatures, or
-annotations - see [Known limitations](#known-limitations).
+(`LineWrapper`). Control-flow headers, switch arms and trailing comments are
+handled too, and blank lines go around every brace-bodied block. It does not
+yet touch general token spacing, or extend precedence-aware wrapping to method
+signatures or annotations - see [Known limitations](#known-limitations).
 
 ## Requirements
 
@@ -17,22 +18,32 @@ annotations - see [Known limitations](#known-limitations).
 ## Usage
 
 ```bash
-java -m org.tiger.java.code.formatter <file.java> [<file.java>...]         # print formatted output to stdout
-java -m org.tiger.java.code.formatter -w <file.java> [<file.java>...]       # rewrite files in place
-java -m org.tiger.java.code.formatter --write <file.java> [<file.java>...]
+java -m org.tiger.java.code.formatter <file-or-dir>...            # print formatted output to stdout
+java -m org.tiger.java.code.formatter -w <file-or-dir>...         # rewrite files in place
+java -m org.tiger.java.code.formatter -w --changed                # only what git reports as changed or untracked
 ```
+
+A directory means every `.java` file under it - in a git repository, the tracked
+and untracked-but-not-ignored ones. Files are formatted in parallel, and a file
+that is already formatted is not rewritten.
+
+| Option         | Meaning                                                                  |
+| -------------- | ------------------------------------------------------------------------ |
+| `-w`, `--write`| Rewrite files in place instead of printing the result                    |
+| `--changed`    | Also format the files `git` reports as modified or untracked (needs git) |
+| `--no-cache`   | Ignore and do not update the cache                                       |
+| `-v`           | Print a one-line summary (formatted / already formatted / skipped / failed) |
 
 The formatter first validates that a file is syntactically correct Java
 (without resolving its classpath) and leaves it untouched, reporting
 diagnostics, if it isn't. If a line still exceeds the configured column limit
 after reindenting and wrapping and has no safe break point (e.g. it's a single
 long string literal or a text-block line), it's left unchanged and reported
-rather than corrupted.
+rather than corrupted. A file with such a line makes the exit code 1.
 
 ### Configuration
 
-Drop a `.jcf.properties` file in the directory you run the formatter from to
-override defaults:
+Put a `.jcf/config.properties` file in your project:
 
 ```properties
 wrapAtColumn=100
@@ -44,7 +55,26 @@ indent=2
 | `wrapAtColumn` | `120`   | Column at which a line gets wrapped                    |
 | `indent`       | `4`     | Spaces per indent level, used everywhere (scope, wrapped lines, and each precedence-tier step) |
 
-No file present means the defaults apply.
+The config is found **per file**: the `.jcf/config.properties` of every
+directory from the file's own directory up to the *outermost repository root*
+(the topmost ancestor with a `.git` entry - a directory, or the file a
+submodule or worktree has) are layered, and a nearer file overrides only the
+keys it sets, inheriting the rest. A module or submodule can therefore override
+the root's settings. Outside a repository only the file's own directory
+counts. The formatter only reads configs where they already exist; it never
+creates a `.jcf` folder in a source directory. No config means the defaults
+apply.
+
+### Cache
+
+A run records every file it finds already formatted - a hash of its content and
+its effective config - in `<repository root>/.jcf/cache`. A later run skips those
+files without parsing or formatting them, so re-running on an unchanged tree
+takes a fraction of a second, and after an edit only the edited files are
+formatted. The cache is keyed by content, so it survives branch switches, and
+it is thrown away whenever the formatter itself changes. The folder ignores
+itself (it holds a `.gitignore` containing `*`), so it needs no entry in your
+`.gitignore`; it is safe to delete at any time, and `--no-cache` bypasses it.
 
 ## Build tool
 
@@ -85,8 +115,8 @@ case also gets a free idempotency check - formatting `Expected.java.txt` again
 must be a no-op. Fixtures use a `.java.txt` extension rather than `.java`,
 since Jenesis compiles any `.java` file under `src/test/java` as real source.
 
-All cases share `src/test/java/resources/.jcf.properties` (`wrapAtColumn=60`),
-the same file format and loading path as a real `.jcf.properties` - a narrower
+All cases share `src/test/java/cases/.jcf/config.properties` (`wrapAtColumn=60`),
+the same file format as a real `.jcf/config.properties` - a narrower
 column budget keeps fixtures short and readable.
 
 `java build/jenesis/Make.java` compiles, tests, and packages both modules, so

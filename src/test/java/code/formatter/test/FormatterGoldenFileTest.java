@@ -37,8 +37,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
  * .java} file under {@code src/test} as real source, so a plain {@code .java} fixture would be
  * compiled as test code instead of copied as a resource.
  *
- * <p>All cases share {@code src/test/resources/.jcf.properties} ({@code wrapAtColumn=60}), loaded
- * through the same {@link FormatterConfig} a real {@code .jcf.properties} would be - a narrower
+ * <p>All cases share {@code src/test/java/cases/.jcf/config.properties} ({@code wrapAtColumn=60}), loaded
+ * through the same {@link FormatterConfig} a real {@code .jcf/config.properties} would be - a narrower
  * column budget than the 120-column default keeps fixtures short and readable.
  */
 class FormatterGoldenFileTest {
@@ -49,7 +49,7 @@ class FormatterGoldenFileTest {
     private static final FormatterConfig CONFIG = loadConfig();
 
     private static FormatterConfig loadConfig() {
-        String path = "/cases/.jcf.properties";
+        String path = "/cases/.jcf/config.properties";
         try (InputStream in = FormatterGoldenFileTest.class.getResourceAsStream(path)) {
             Objects.requireNonNull(in, path + " resource not found on the test classpath");
             Properties properties = new Properties();

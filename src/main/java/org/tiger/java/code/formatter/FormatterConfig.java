@@ -7,13 +7,16 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 /**
- * Formatting options, loadable from a {@code .properties} file: the column at which
+ * Formatting options, loadable from a {@code .jcf/config.properties} file (see {@link ConfigResolver}): the column at which
  * {@link LineWrapper}/{@link ExpressionWrapper} wrap a line, and the number of spaces per indent
  * level used throughout {@link ScopeReindenter}, {@link LineWrapper} and {@link ExpressionWrapper}.
  */
 public record FormatterConfig(int wrapAtColumn, int indent) {
 
-    public static final String FILE_NAME = ".jcf.properties";
+    /** The folder holding the formatter's per-project files; see {@link ConfigResolver}. */
+    public static final String DIR_NAME = ".jcf";
+    /** The config file inside {@link #DIR_NAME}. */
+    public static final String FILE_NAME = "config.properties";
     private static final int DEFAULT_WRAP_AT_COLUMN = 120;
     private static final int DEFAULT_INDENT = 4;
 
@@ -53,14 +56,5 @@ public record FormatterConfig(int wrapAtColumn, int indent) {
             properties.load(in);
         }
         return from(properties);
-    }
-
-    /**
-     * {@link #load(Path)}s {@value #FILE_NAME} from {@code directory} if present, else
-     * {@link #DEFAULT}.
-     */
-    public static FormatterConfig loadFromDirectory(Path directory) throws IOException {
-        Path file = directory.resolve(FILE_NAME);
-        return Files.isRegularFile(file) ? load(file) : DEFAULT;
     }
 }
