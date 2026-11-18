@@ -1,0 +1,12 @@
+class A {
+    static final Color[] COLORS = {
+        new Color(1),
+        new Color(2),
+        new Color(3),
+    };
+
+    int[][] grid = {
+        {1, 2},
+        {3, 4},
+    };
+}

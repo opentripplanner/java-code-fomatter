@@ -1,0 +1,10 @@
+class A {
+    @Option(
+        names = "--x",
+        description = "d"
+    )
+    public boolean flag = false;
+
+    void f() {
+    }
+}

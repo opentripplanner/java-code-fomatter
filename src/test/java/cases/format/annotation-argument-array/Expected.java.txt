@@ -1,0 +1,9 @@
+@Module(
+    includes = Other.class,
+    modules = {
+        First.class,
+        Second.class,
+    }
+)
+class A {
+}

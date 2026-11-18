@@ -38,7 +38,7 @@ final class ScopeReindenter {
      * of a bare depth counter, is what lets an anonymous class or lambda opened on a continuation
      * line (e.g. {@code return\n  new Foo() \{}) keep its body and closer relative to that line.
      */
-    private record Frame(int openerDepth, boolean isEnum, boolean isCase) {
+    private record Frame(int openerDepth, boolean isEnum, boolean isCase, int parenBase) {
     }
 
     private static final java.util.regex.Pattern ENUM_WORD = java.util.regex.Pattern.compile("\\benum\\b");
@@ -53,7 +53,7 @@ final class ScopeReindenter {
         LiteralScanner.Scan scan = LiteralScanner.scan(source);
         StringBuilder out = new StringBuilder(source.length());
         java.util.ArrayDeque<Frame> stack = new java.util.ArrayDeque<>();
-        java.util.ArrayDeque<Integer> parens = new java.util.ArrayDeque<>();
+        java.util.ArrayDeque<int[]> parens = new java.util.ArrayDeque<>();
         boolean previousEndsStatement = true;
         boolean previousNetBracesZero = true;
         char previousLast = 0;
@@ -162,7 +162,7 @@ final class ScopeReindenter {
                     if (trimmed.startsWith(")") && leadingCloses == 0 && !parens.isEmpty()) {
                         // A closing ')' returns to (at least) the display depth of the line that opened it,
                         // even when the previous line (e.g. an anonymous class's '}') ended a unit.
-                        displayDepth = Math.max(displayDepth, parens.peek());
+                        displayDepth = Math.max(displayDepth, parens.peek()[0]);
                     }
                     lineDisplayDepth = displayDepth;
                     if (firstKind == LiteralScanner.Kind.BLOCK_COMMENT) {
@@ -173,16 +173,23 @@ final class ScopeReindenter {
                     out.append(trimmed);
                 }
                 int netBraces = applyBraces(scan, lineStart, contentEnd, stack, lineDisplayDepth,
-                    lineIsContinuation);
+                    lineIsContinuation, parens.size());
                 if (isCaseLabel && lastCodeChar(scan, lineStart, contentEnd) == ':') {
                     // Statements after `case X:` / `default:` sit one level deeper, until the next
                     // label or the switch's closing brace.
-                    stack.push(new Frame(lineDisplayDepth, false, true));
+                    stack.push(new Frame(lineDisplayDepth, false, true, parens.size()));
                 }
-                applyParens(scan, lineStart, contentEnd, parens, lineDisplayDepth);
-                boolean enumConstantContext = parens.isEmpty() && !stack.isEmpty() && stack.peek().isEnum();
+                boolean closedAnnotation = applyParens(scan, lineStart, contentEnd, parens, lineDisplayDepth,
+                    trimmed.startsWith("@") && !trimmed.startsWith("@interface"));
+                boolean enumConstantContext = !stack.isEmpty() && stack.peek().isEnum()
+                    && parens.size() == stack.peek().parenBase();
                 Boolean endsStatement = classifyLineEnd(scan, lineStart, contentEnd, enumConstantContext);
                 if (isCaseLabel) {
+                    endsStatement = Boolean.TRUE;
+                }
+                // The ')' closing a multi-line annotation's argument list ends the annotation, so
+                // the declaration after it isn't read as continuing it.
+                if (closedAnnotation && parens.isEmpty() && lastCodeChar(scan, lineStart, contentEnd) == ')') {
                     endsStatement = Boolean.TRUE;
                 }
                 if (endsStatement != null) {
@@ -294,7 +301,8 @@ final class ScopeReindenter {
      * starts an anonymous class or lambda opens at the line's own display depth instead.
      */
     private static int applyBraces(LiteralScanner.Scan scan, int lineStart, int contentEnd,
-        java.util.ArrayDeque<Frame> stack, int lineDisplayDepth, boolean lineIsContinuation) {
+        java.util.ArrayDeque<Frame> stack, int lineDisplayDepth, boolean lineIsContinuation,
+        int parensAtLineStart) {
         String source = scan.source();
         int net = 0;
         for (int i = lineStart; i < contentEnd; i++) {
@@ -304,10 +312,17 @@ final class ScopeReindenter {
             char c = source.charAt(i);
             if (c == '{') {
                 String prefix = source.substring(lineStart, i);
-                int opener = lineIsContinuation && ANON_OR_LAMBDA.matcher(prefix).find()
-                    ? lineDisplayDepth
-                    : bodyDepth(stack);
-                stack.push(new Frame(opener, ENUM_WORD.matcher(prefix).find(), false));
+                String beforeBrace = prefix.stripTrailing();
+                boolean arrayInitializer = beforeBrace.endsWith("=") || beforeBrace.endsWith("]")
+                    || beforeBrace.endsWith(",")
+                    || (beforeBrace.isEmpty() && !stack.isEmpty() && stack.peek().isEnum());
+                boolean hangs = lineIsContinuation
+                    && (ANON_OR_LAMBDA.matcher(prefix).find()
+                        || (parensAtLineStart > 0 && arrayInitializer));
+                int opener = hangs ? lineDisplayDepth : bodyDepth(stack);
+                int parenBase = parensAtLineStart + netParens(scan, lineStart, i);
+                stack.push(new Frame(opener, ENUM_WORD.matcher(prefix).find() || arrayInitializer, false,
+                    parenBase));
                 net++;
             } else if (c == '}') {
                 if (!stack.isEmpty() && stack.peek().isCase()) {
@@ -322,21 +337,39 @@ final class ScopeReindenter {
         return net;
     }
 
-    /** Pushes the line's display depth for each unmatched '(' and pops one for each ')'. */
-    private static void applyParens(LiteralScanner.Scan scan, int lineStart, int contentEnd,
-        java.util.ArrayDeque<Integer> parens, int lineDisplayDepth) {
+    private static int netParens(LiteralScanner.Scan scan, int from, int to) {
         String source = scan.source();
+        int net = 0;
+        for (int i = from; i < to; i++) {
+            if (!scan.isVerbatim(i)) {
+                char c = source.charAt(i);
+                net += c == '(' ? 1 : c == ')' ? -1 : 0;
+            }
+        }
+        return net;
+    }
+
+    /**
+     * Pushes the line's display depth (and whether the line starts an annotation) for each
+     * unmatched '(' and pops one for each ')'. Returns whether a ')' on this line closed the
+     * parenthesis an annotation line opened.
+     */
+    private static boolean applyParens(LiteralScanner.Scan scan, int lineStart, int contentEnd,
+        java.util.ArrayDeque<int[]> parens, int lineDisplayDepth, boolean lineStartsAnnotation) {
+        String source = scan.source();
+        boolean closedAnnotation = false;
         for (int i = lineStart; i < contentEnd; i++) {
             if (scan.isVerbatim(i)) {
                 continue;
             }
             char c = source.charAt(i);
             if (c == '(') {
-                parens.push(lineDisplayDepth);
+                parens.push(new int[] {lineDisplayDepth, lineStartsAnnotation ? 1 : 0});
             } else if (c == ')' && !parens.isEmpty()) {
-                parens.pop();
+                closedAnnotation = parens.pop()[1] == 1;
             }
         }
+        return closedAnnotation;
     }
 
     /** Whether the next line holding code (skipping blank and comment-only lines) is a case label. */
