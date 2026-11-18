@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * The command line entry point. Arguments are Java files and/or directories (every {@code .java} file under them; in a
+ * The command line entry point. Arguments are files and/or directories (every {@code .java}, {@code .json} and {@code .md} file under them; in a
  * git repository, the tracked and untracked-but-not-ignored ones). See {@link FormatRun} for what a run does.
  * <p>
  * Exit codes: 0 when every file was formatted or is already formatted (and, with {@code --check}, none would change); 1
@@ -102,21 +102,21 @@ public class JavaCodeFomatter {
       Path path = Path.of(target);
 
       if (Files.isDirectory(path)) {
-        files.addAll(FormatRun.javaFilesUnder(path));
+        files.addAll(FormatRun.formattableFilesUnder(path));
       } else {
         files.add(path);
       }
     }
 
     if (changedOnly) {
-      files.addAll(FormatRun.changedJavaFiles(Path.of("")));
+      files.addAll(FormatRun.changedFormattableFiles(Path.of("")));
     }
 
     return new ArrayList<>(files);
   }
 
   private static void printUsage(PrintStream out) {
-    out.println("Usage: java -m org.tiger.java.code.formatter [options] <file.java|directory>...");
+    out.println("Usage: java -m org.tiger.java.code.formatter [options] <file|directory>...");
     out.println("  -w, --write     rewrite files in place (default: print the formatted text)");
     out.println("      --check     list the files that would change and exit 1 if there are any; write nothing");
     out.println("      --changed   also format the files git reports as changed or untracked");

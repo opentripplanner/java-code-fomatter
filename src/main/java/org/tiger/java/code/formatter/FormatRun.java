@@ -110,6 +110,12 @@ public final class FormatRun {
       return failure(path, path + ": " + e.getMessage());
     }
 
+    DocumentFormatter.Kind kind = DocumentFormatter.kindOf(path);
+
+    if (kind != null && !config.documents().formats().contains(kind.config())) {
+      return new FileResult(path, Status.UNCHANGED, List.of(), List.of(), null);
+    }
+
     FormatCache cache = null;
 
     if (caches != null) {
@@ -129,6 +135,10 @@ public final class FormatRun {
       }
 
       return new FileResult(path, Status.CACHED, List.of(), warnings, mode == Mode.PRINT ? source : null);
+    }
+
+    if (kind != null) {
+      return processDocument(path, kind, source, bytes, config, mode, cache, key);
     }
 
     SourceFormatter.FormatResult result;
@@ -179,6 +189,39 @@ public final class FormatRun {
     }
   }
 
+  /** Formats a JSON or Markdown file; one that cannot be formatted safely is left alone and reported as a warning. */
+  private static FileResult processDocument(Path path, DocumentFormatter.Kind kind, String source, byte[] bytes,
+    FormatterConfig config, Mode mode, FormatCache cache, FormatCache.Key key) {
+    DocumentFormatter.Result result = DocumentFormatter.format(kind, source, config);
+
+    if (result instanceof DocumentFormatter.Skipped(var reason)) {
+      return new FileResult(path, Status.UNCHANGED, List.of(), List.of(path + ": " + reason), null);
+    }
+
+    String text = ((DocumentFormatter.Formatted) result).text();
+    boolean changed = !text.equals(source);
+
+    if (mode == Mode.WRITE && changed) {
+      try {
+        Files.writeString(path, text, StandardCharsets.UTF_8);
+      } catch (IOException e) {
+        return failure(path, path + ": " + e.getMessage());
+      }
+    }
+
+    if (cache != null && (mode != Mode.CHECK || !changed)) {
+      if (!changed) {
+        cache.add(key, new int[0]);
+      } else if (DocumentFormatter.format(kind, text, config) instanceof DocumentFormatter.Formatted(var again)
+        && again.equals(text)) {
+        cache.add(FormatCache.key(text.getBytes(StandardCharsets.UTF_8), config), new int[0]);
+      }
+    }
+
+    return new FileResult(path, changed ? Status.CHANGED : Status.UNCHANGED, List.of(), List.of(),
+      mode == Mode.PRINT ? text : null);
+  }
+
   /**
    * Records a fixed point: the source if formatting left it alone, or the formatted text if formatting that again also
    * changes nothing (checked here, so only stable output is cached).
@@ -217,16 +260,32 @@ public final class FormatRun {
 
   /** Every {@code .java} file under {@code dir}: git's list (tracked + untracked, not ignored) if it is a repo. */
   public static List<Path> javaFilesUnder(Path dir) {
-    List<String> names = git(dir, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", "*.java");
+    return filesUnder(dir, name -> name.endsWith(".java"));
+  }
+
+  /**
+   * Every file under {@code dir} the formatter can handle: Java, JSON and Markdown files. Which of them are formatted
+   * is decided per file by {@code formats} in the config; see {@link FormatterConfig.Documents}.
+   */
+  public static List<Path> formattableFilesUnder(Path dir) {
+    return filesUnder(dir, FormatRun::isFormattable);
+  }
+
+  private static boolean isFormattable(String name) {
+    return name.endsWith(".java") || DocumentFormatter.kindOf(Path.of(name)) != null;
+  }
+
+  private static List<Path> filesUnder(Path dir, java.util.function.Predicate<String> wanted) {
+    List<String> names = git(dir, "ls-files", "-z", "--cached", "--others", "--exclude-standard");
 
     if (names != null) {
-      return names.stream().map(dir::resolve).filter(Files::isRegularFile).toList();
+      return names.stream().filter(wanted).map(dir::resolve).filter(Files::isRegularFile).toList();
     }
 
     try (Stream<Path> walk = Files.walk(dir)) {
       return walk
         .filter(Files::isRegularFile)
-        .filter(p -> p.toString().endsWith(".java"))
+        .filter(p -> wanted.test(p.toString()))
         .filter(
           p -> !hasSegment(dir.relativize(p), ".git") && !hasSegment(dir.relativize(p), FormatterConfig.DIR_NAME)
         )
@@ -239,13 +298,22 @@ public final class FormatRun {
 
   /** The {@code .java} files under {@code dir} that git reports as modified since HEAD or as new and not ignored. */
   public static List<Path> changedJavaFiles(Path dir) {
+    return changedFiles(dir, name -> name.endsWith(".java"));
+  }
+
+  /** Like {@link #changedJavaFiles}, for every file the formatter can handle (see {@link #formattableFilesUnder}). */
+  public static List<Path> changedFormattableFiles(Path dir) {
+    return changedFiles(dir, FormatRun::isFormattable);
+  }
+
+  private static List<Path> changedFiles(Path dir, java.util.function.Predicate<String> wanted) {
     List<Path> files = new ArrayList<>();
     List<String> modified = git(dir, "diff", "--name-only", "--relative", "-z", "HEAD");
     List<String> untracked = git(dir, "ls-files", "-z", "--others", "--exclude-standard");
 
     for (List<String> names : java.util.Arrays.asList(modified, untracked)) {
       if (names != null) {
-        names.stream().filter(name -> name.endsWith(".java")).map(dir::resolve).filter(Files::isRegularFile)
+        names.stream().filter(wanted).map(dir::resolve).filter(Files::isRegularFile)
           .filter(p -> !files.contains(p)).forEach(files::add);
       }
     }

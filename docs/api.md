@@ -23,6 +23,8 @@ report.files();    // one FormatRun.FileResult per file
 | `FileResult` | `path()`, `status()`, `errors()`, `warnings()`, `formattedText()`. |
 | `FormatRun.javaFilesUnder(Path)` | The Java files under a directory (git aware). |
 | `FormatRun.changedJavaFiles(Path)` | The files that git reports as changed or untracked. |
+| `FormatRun.formattableFilesUnder(Path)`, `changedFormattableFiles(Path)` | The same, for Java, JSON and Markdown files. |
+| `DocumentFormatter.format(kind, text, config)` | Formats a JSON or Markdown string. Returns `Formatted` or `Skipped`. |
 
 `run` finds the configuration for each file itself, with the layering described in
 [Configuration](configuration.md), and it uses the same cache as the command line.

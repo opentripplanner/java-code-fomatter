@@ -1,0 +1,25 @@
+{
+  "short": [1, 2, 3],
+  "obj": { "x": 1, "y": 2 },
+  "expanded": {
+    "k": true
+  },
+  "list of objects": [
+    { "a": 1, "b": 2 },
+    { "a": 3, "b": 4 }
+  ],
+  "single": [{ "a": 1 }],
+  "long array": [
+    "aaaaaaaaaaaaaaaa",
+    "bbbbbbbbbbbbbbbb",
+    "cccccccccccccccc"
+  ],
+  "numbers": [
+    100000, 200000, 300000, 400000,
+    500000, 600000, 700000, 800000,
+    900000
+  ],
+
+  "after blank": null,
+  "trailing": [1, 2]
+}
