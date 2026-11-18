@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
  * {@code src/test} as real source, so a plain {@code .java} fixture would be compiled as test code instead of copied as
  * a resource.
  * <p>
- * All cases share {@code src/test/java/cases/.jcf/config.properties} ({@code wrapAtColumn=60}), loaded through the same
+ * All cases share {@code formatter/src/test/java/cases/.jcf/config.properties} ({@code wrapAtColumn=60}), loaded through the same
  * {@link FormatterConfig} a real {@code .jcf/config.properties} would be - a narrower column budget than the 120-column
  * default keeps fixtures short and readable.
  */

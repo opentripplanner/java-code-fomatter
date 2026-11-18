@@ -26,12 +26,12 @@ java build/jenesis/Make.java pin          # resolve and record dependency checks
 
 ## Tests
 
-Tests are in `src/test/java/`, wired as a Jenesis `@jenesis.test` module on JUnit 5. `FormatterGoldenFileTest` is one
-data-driven test over every `src/test/java/cases/**/<name>/{Input.java.txt,Expected.java.txt}` pair. To add coverage,
+Tests are in `formatter/src/test/java/`, wired as a Jenesis `@jenesis.test` module on JUnit 5. `FormatterGoldenFileTest` is one
+data-driven test over every `formatter/src/test/java/cases/**/<name>/{Input.java.txt,Expected.java.txt}` pair. To add coverage,
 add a fixture folder, not code. Every case also gets an idempotency check: formatting `Expected.java.txt` again must
-change nothing. Fixtures end in `.java.txt` because Jenesis compiles every `.java` file under `src/test/java`.
+change nothing. Fixtures end in `.java.txt` because Jenesis compiles every `.java` file under `formatter/src/test/java`.
 
-The cases share `src/test/java/cases/.jcf/config.properties` (`wrapAtColumn=60`), in the same format as a real
+The cases share `formatter/src/test/java/cases/.jcf/config.properties` (`wrapAtColumn=60`), in the same format as a real
 configuration. A narrow limit keeps fixtures short.
 
 ## The Maven plugin
@@ -45,3 +45,33 @@ cd maven-plugin
 
 This builds the formatter, installs it into the local Maven repository, builds the plugin and runs the integration
 tests in `maven-plugin/src/it`.
+
+## Publishing to Maven Central
+
+Two artifacts are published: `formatter` (built by `formatter/pom.xml` from the same sources as Jenesis) and
+`formatter-maven-plugin`. The `release` profile of both poms adds the source and javadoc jars, signs everything with GPG
+and uploads a bundle with the Central Publisher plugin.
+
+You need these once:
+
+1. A [Sonatype Central](https://central.sonatype.com) account with a verified namespace for the `groupId`
+   (`org.opentripplanner.java.code`).
+2. A user token from Central, stored in `~/.m2/settings.xml` under the server id `central`.
+3. A GPG key, with the public key on a key server such as `keyserver.ubuntu.com`.
+
+To release:
+
+```bash
+# 1. Set the version in both poms, maven-plugin/build.sh and the READMEs, then tag it.
+# 2. Check everything, without signing or uploading:
+maven-plugin/build.sh verify
+mvn -f formatter/pom.xml -Prelease -Dgpg.skip verify
+mvn -f maven-plugin/pom.xml -Prelease -Dgpg.skip verify
+
+# 3. Publish. Do the formatter first: the plugin depends on it.
+mvn -f formatter/pom.xml -Prelease deploy
+mvn -f maven-plugin/pom.xml -Prelease deploy
+```
+
+Each deploy uploads a bundle that you then check and publish in the Central portal. A published version cannot be
+removed or changed.
