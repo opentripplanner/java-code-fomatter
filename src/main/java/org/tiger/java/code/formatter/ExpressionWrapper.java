@@ -436,7 +436,7 @@ final class ExpressionWrapper {
     int w = ctx.indentWidth();
 
     // 1. The labels, rebuilt from the tree: `case A, B, C` on one line if it fits, else the
-    //    first label on the `case` line and the rest one per line a level deeper.
+    //    `case` alone and the labels one per line a level deeper.
     List<String> labelTexts = new ArrayList<>();
 
     for (CaseLabelTree label : node.getLabels()) {
@@ -470,11 +470,13 @@ final class ExpressionWrapper {
     if (onlyDefault || caseIndent + joined.length() <= ctx.wrapAtColumn()) {
       head.add(joined);
     } else {
+      // `case` alone, then every label on its own line one level deeper (the same bracket shape as a
+      // wrapped argument list): the labels read as one column.
+      head.add("case");
+
       for (int k = 0; k < labelTexts.size(); k++) {
         String suffix = k < labelTexts.size() - 1 ? "," : "";
-        head.add(k == 0
-                    ? "case " + labelTexts.get(k) + suffix
-                    : " ".repeat(caseIndent + w) + labelTexts.get(k) + suffix);
+        head.add(" ".repeat(caseIndent + w) + labelTexts.get(k) + suffix);
       }
     }
 

@@ -1,7 +1,8 @@
 class A {
     Object f(Mode mode) {
         return switch (mode) {
-            case FIRST_VERY_LONG_LABEL,
+            case
+                FIRST_VERY_LONG_LABEL,
                 SECOND_VERY_LONG_LABEL,
                 THIRD_VERY_LONG_LABEL
                     -> make(1);

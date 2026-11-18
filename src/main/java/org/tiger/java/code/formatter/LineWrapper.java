@@ -261,7 +261,8 @@ final class LineWrapper {
     }
 
     return switch (source.substring(k + 1, wordEnd)) {
-      case "public",
+      case
+        "public",
         "private",
         "protected",
         "static",
