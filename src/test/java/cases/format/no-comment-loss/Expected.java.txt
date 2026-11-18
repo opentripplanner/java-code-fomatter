@@ -8,6 +8,7 @@ class A {
         ) {
             run();
         }
+
         // trailing note
         String value = aaaaaaaaaaaaaaaaaaaa +
             bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;

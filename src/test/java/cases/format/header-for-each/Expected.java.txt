@@ -6,12 +6,14 @@ class A {
         ) {
             run();
         }
+
         for (
             ConfiguredDataSource<OsmExtractParameters> osmSource :
                 dataSources.getOsmConfiguredDataSource()
         ) {
             run();
         }
+
         for (
             Source sourceOne : repository.getSourcesNowAll()
         ) {

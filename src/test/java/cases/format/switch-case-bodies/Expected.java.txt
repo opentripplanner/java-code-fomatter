@@ -14,8 +14,10 @@ class A {
                         baz();
                         break;
                 }
+
                 return 0;
         }
+
         return -1;
     }
 }

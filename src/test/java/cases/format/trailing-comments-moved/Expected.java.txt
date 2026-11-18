@@ -1,9 +1,11 @@
 class A {
     // the first value
     int a = 1;
+
     void f(int x) {
         /* the second value */
         int b = 2;
+
         // positive
         if (x > 0) {
             // do it
@@ -13,6 +15,7 @@ class A {
             stop();
             // done
         }
+
         // the first
         call(first,
             second);
