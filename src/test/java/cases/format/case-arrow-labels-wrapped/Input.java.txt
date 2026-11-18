@@ -1,0 +1,15 @@
+class A {
+    Object f(Mode mode) {
+        return switch (mode) {
+            case FIRST_VERY_LONG_LABEL, SECOND_VERY_LONG_LABEL, THIRD_VERY_LONG_LABEL -> make(1);
+            case ONE,
+              TWO,
+              THREE -> new TransferMeta(
+              TransferType.FREE_TRANSFER,
+              Money.ZERO_USD,
+              payOnExit
+            );
+            default -> null;
+        };
+    }
+}

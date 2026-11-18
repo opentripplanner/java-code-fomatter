@@ -2,7 +2,9 @@ package org.tiger.java.code.formatter;
 
 import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.BinaryTree;
+import com.sun.source.tree.CaseLabelTree;
 import com.sun.source.tree.CaseTree;
+import com.sun.source.tree.DefaultCaseLabelTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.ConditionalExpressionTree;
 import com.sun.source.tree.EnhancedForLoopTree;
@@ -365,13 +367,10 @@ final class ExpressionWrapper {
         if (i < 1 || source.charAt(i) != '>' || source.charAt(i - 1) != '-') {
             return;
         }
-        int replaceStart = i - 1;
-        while (replaceStart > 0 && Character.isWhitespace(source.charAt(replaceStart - 1))) {
-            replaceStart--;
-        }
+        int caseStart = ctx.start(node);
         int bodyEnd = ctx.end(body);
-        int lineStart = lineStartOf(source, ctx.start(node));
-        if (containsComment(ctx, replaceStart, bodyEnd)) {
+        int lineStart = lineStartOf(source, caseStart);
+        if (!source.substring(lineStart, caseStart).isBlank() || containsComment(ctx, caseStart, bodyEnd)) {
             return;
         }
         // Over the limit: some line is too long, or the arm written on one line would be (an arm
@@ -389,12 +388,44 @@ final class ExpressionWrapper {
         }
 
         int w = ctx.indentWidth();
-        int labelLineStart = lineStartOf(source, replaceStart);
-        int labelIndent = 0;
-        while (labelLineStart + labelIndent < source.length() && source.charAt(labelLineStart + labelIndent) == ' ') {
-            labelIndent++;
+
+        // 1. The labels, rebuilt from the tree: `case A, B, C` on one line if it fits, else the
+        //    first label on the `case` line and the rest one per line a level deeper.
+        List<String> labelTexts = new ArrayList<>();
+        for (CaseLabelTree label : node.getLabels()) {
+            String text = label instanceof DefaultCaseLabelTree ? "default" : ctx.text(label);
+            if (text.indexOf('\n') >= 0) {
+                return;
+            }
+            labelTexts.add(text);
         }
-        int arrowIndent = labelIndent + w;
+        if (node.getGuard() != null) {
+            String guard = ctx.text(node.getGuard());
+            if (guard.indexOf('\n') >= 0 || labelTexts.isEmpty()) {
+                return;
+            }
+            labelTexts.set(labelTexts.size() - 1, labelTexts.get(labelTexts.size() - 1) + " when " + guard);
+        }
+        if (labelTexts.isEmpty()) {
+            return;
+        }
+        List<String> head = new ArrayList<>();
+        boolean onlyDefault = node.getLabels().size() == 1 && node.getLabels().get(0) instanceof DefaultCaseLabelTree;
+        String joined = onlyDefault ? "default" : "case " + String.join(", ", labelTexts);
+        if (onlyDefault || caseIndent + joined.length() <= ctx.wrapAtColumn()) {
+            head.add(joined);
+        } else {
+            for (int k = 0; k < labelTexts.size(); k++) {
+                String suffix = k < labelTexts.size() - 1 ? "," : "";
+                head.add(k == 0
+                    ? "case " + labelTexts.get(k) + suffix
+                    : " ".repeat(caseIndent + w) + labelTexts.get(k) + suffix);
+            }
+        }
+
+        // 2. `->` one level under the last label line; 3. the body continues from it.
+        int lastLabelIndent = head.size() == 1 ? caseIndent : caseIndent + w;
+        int arrowIndent = lastLabelIndent + w;
         int level = arrowIndent / w + 1;
         String lead = "-> " + (isThrow ? "throw " : "");
 
@@ -409,7 +440,7 @@ final class ExpressionWrapper {
             rendered = render(expression, arrowIndent + lead.length(), level, ctx.reserving(1));
         }
 
-        StringBuilder replacement = new StringBuilder();
+        StringBuilder replacement = new StringBuilder(String.join("\n", head));
         replacement.append('\n').append(" ".repeat(arrowIndent)).append(lead).append(rendered.get(0));
         for (int k = 1; k < rendered.size(); k++) {
             replacement.append('\n').append(rendered.get(k));
@@ -417,7 +448,7 @@ final class ExpressionWrapper {
         if (isThrow) {
             replacement.append(';');
         }
-        edits.add(new Edit(replaceStart, bodyEnd, replacement.toString()));
+        edits.add(new Edit(caseStart, bodyEnd, replacement.toString()));
     }
 
     /**
