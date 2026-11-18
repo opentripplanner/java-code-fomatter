@@ -8,8 +8,8 @@ class A {
         ) {
             run();
         }
-        String value = aaaaaaaaaaaaaaaaaaaa
-            + // trailing note
+        // trailing note
+        String value = aaaaaaaaaaaaaaaaaaaa +
             bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;
     }
 }

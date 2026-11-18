@@ -4,8 +4,8 @@ public class Comments {
     public void run() {
         String url =
             "http://example.com/some/really/long/path/here";
-        compute(argOne, argTwo,
-            argThree); // trailing comment, with a comma
+        // trailing comment, with a comma
+        compute(argOne, argTwo, argThree);
         // a comment with /* fake block comment markers */ inside it
         String weird =
             "a string with // fake line comment markers inside";

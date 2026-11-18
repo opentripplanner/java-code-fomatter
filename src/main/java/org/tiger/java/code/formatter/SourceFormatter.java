@@ -37,7 +37,7 @@ public final class SourceFormatter {
             return new ValidationFailed(original.diagnostics());
         }
 
-        String reindented = ScopeReindenter.reindent(source, config.indent());
+        String reindented = ScopeReindenter.reindent(CommentFormatter.format(source), config.indent());
         // ExpressionWrapper hands multi-line spans (switch expressions, anonymous-class bodies) off
         // verbatim, so after it moves their first line they need reindenting again.
         String expressionWrapped = ScopeReindenter.reindent(ExpressionWrapper.wrap(reindented, config), config.indent());

@@ -1,0 +1,22 @@
+class A {
+    int a = 1; // the first value
+    void f(int x) {
+        int b = 2; /* the second value */
+        if (x > 0) { // positive
+            run(); // do it
+        } else { // negative
+            stop();
+        } // done
+        call(first, // the first
+            second);
+        foo(/* flag */ true);
+        // already on its own line
+        String s = "a // not a comment";
+        int sonar = compute(); // NOSONAR - reviewed
+        int pmd = compute(); //NOPMD
+        int nls = compute(); /* CHECKSTYLE:OFF */
+        String t = """
+            text // inside the block
+            """; // after the block
+    }
+}
