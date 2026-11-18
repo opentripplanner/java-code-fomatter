@@ -1,0 +1,6 @@
+class A {
+    void f() {
+        log("The first half of a long string that runs past the limit" +
+            " and the second half of it.");
+    }
+}

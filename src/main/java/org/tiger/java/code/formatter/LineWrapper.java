@@ -203,7 +203,11 @@ final class LineWrapper {
         int matched = matchOperator(source, i, end);
 
         if (matched > 0) {
-          if (!(switchArm && source.startsWith("->", i))) {
+          // An operator that starts the line, or that ends it, is never a break point: breaking
+          // there would leave it alone on a line (the operand it belongs to is on the other side).
+          boolean leading = source.substring(start, i).isBlank();
+          boolean trailing = source.substring(i + matched, end).isBlank();
+          if (!(switchArm && source.startsWith("->", i)) && !leading && !trailing) {
             operators.add(new Candidate(depth, i));
           }
 
