@@ -3,8 +3,8 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.opentripplanner.java.code</groupId>
-  <artifactId>formatter-maven-plugin</artifactId>
+  <groupId>org.opentripplanner.java.code.formatter</groupId>
+  <artifactId>java-formatter-maven-plugin</artifactId>
   <version>1-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
 
@@ -39,7 +39,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.api.version>3.9.11</maven.api.version>
     <plugin.tools.version>3.16.0</plugin.tools.version>
-    <formatter.version>1-SNAPSHOT</formatter.version>
+    <formatter.version>1.0.0</formatter.version>
   </properties>
 
   <dependencies>

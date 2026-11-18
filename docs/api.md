@@ -3,6 +3,16 @@
 The same engine that runs the command line and the Maven plugin is available as a library. The module is
 `org.opentripplanner.java.code.formatter` and it needs `java.compiler` and `jdk.compiler`.
 
+The Maven coordinates are:
+
+```xml
+<dependency>
+  <groupId>org.opentripplanner.java.code.formatter</groupId>
+  <artifactId>java-code-formatter</artifactId>
+  <version>1.0.0</version>
+</dependency>
+```
+
 ## FormatRun
 
 ```java

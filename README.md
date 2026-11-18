@@ -68,8 +68,8 @@ Bind the plugin once. `format` rewrites files, `check` fails the build when a fi
 
 ```xml
 <plugin>
-  <groupId>org.opentripplanner.java.code</groupId>
-  <artifactId>formatter-maven-plugin</artifactId>
+  <groupId>org.opentripplanner.java.code.formatter</groupId>
+  <artifactId>java-formatter-maven-plugin</artifactId>
   <version>1-SNAPSHOT</version>
   <executions>
     <execution>

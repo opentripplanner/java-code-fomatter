@@ -7,8 +7,8 @@
     Only used to publish the formatter to Maven Central. Day-to-day builds and tests use Jenesis (see docs/development.md).
     This pom compiles the same sources as Jenesis does, from src/main/java.
   -->
-  <groupId>org.opentripplanner.java.code</groupId>
-  <artifactId>formatter</artifactId>
+  <groupId>org.opentripplanner.java.code.formatter</groupId>
+  <artifactId>java-code-formatter</artifactId>
   <version>1-SNAPSHOT</version>
 
   <name>Java code formatter</name>

@@ -48,14 +48,14 @@ tests in `maven-plugin/src/it`.
 
 ## Publishing to Maven Central
 
-Two artifacts are published: `formatter` (built by `formatter/pom.xml` from the same sources as Jenesis) and
-`formatter-maven-plugin`. The `release` profile of both poms adds the source and javadoc jars, signs everything with GPG
+Two artifacts are published: `java-code-formatter` (built by `formatter/pom.xml` from the same sources as Jenesis) and
+`java-formatter-maven-plugin`. The `release` profile of both poms adds the source and javadoc jars, signs everything with GPG
 and uploads a bundle with the Central Publisher plugin.
 
 You need these once:
 
 1. A [Sonatype Central](https://central.sonatype.com) account with a verified namespace for the `groupId`
-   (`org.opentripplanner.java.code`).
+   (`org.opentripplanner.java.code.formatter`).
 2. A user token from Central, stored in `~/.m2/settings.xml` under the server id `central`.
 3. A GPG key, with the public key on a key server such as `keyserver.ubuntu.com`.
 
