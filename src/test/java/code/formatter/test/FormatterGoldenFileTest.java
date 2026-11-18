@@ -20,8 +20,8 @@ import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.tiger.java.code.formatter.FormatterConfig;
-import org.tiger.java.code.formatter.SourceFormatter;
+import org.opentripplanner.java.code.formatter.FormatterConfig;
+import org.opentripplanner.java.code.formatter.SourceFormatter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

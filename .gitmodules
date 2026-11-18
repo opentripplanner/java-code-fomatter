@@ -1,3 +1,0 @@
-[submodule "test-repos/OpenTripPlanner"]
-	path = test-repos/OpenTripPlanner
-	url = git@github.com:opentripplanner/OpenTripPlanner.git

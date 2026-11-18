@@ -8,8 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.tiger.java.code.formatter.ConfigResolver;
-import org.tiger.java.code.formatter.FormatterConfig;
+import org.opentripplanner.java.code.formatter.ConfigResolver;
+import org.opentripplanner.java.code.formatter.FormatterConfig;
 
 /** The per-file, layered lookup of {@code .jcf/config.properties}. */
 class ConfigResolverTest {

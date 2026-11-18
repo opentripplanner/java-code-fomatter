@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
-import org.tiger.java.code.formatter.FormatterConfig;
-import org.tiger.java.code.formatter.SourceFormatter;
+import org.opentripplanner.java.code.formatter.FormatterConfig;
+import org.opentripplanner.java.code.formatter.SourceFormatter;
 
 /** Each comment rule on its own and in combination: a rule changes only what it owns. */
 class JavadocRulesTest {

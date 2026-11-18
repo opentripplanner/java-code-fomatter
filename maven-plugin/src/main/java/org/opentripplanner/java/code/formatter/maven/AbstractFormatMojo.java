@@ -1,4 +1,4 @@
-package org.tiger.java.code.formatter.maven;
+package org.opentripplanner.java.code.formatter.maven;
 
 import java.io.File;
 import java.nio.file.FileSystems;
@@ -13,7 +13,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import org.tiger.java.code.formatter.FormatRun;
+import org.opentripplanner.java.code.formatter.FormatRun;
 
 /**
  * What the {@code format} and {@code check} goals share: finding the project's Java sources, running the formatter over

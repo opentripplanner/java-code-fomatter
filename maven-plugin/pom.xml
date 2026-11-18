@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <!-- Coordinates are placeholders: they follow the formatter's package and are renamed with it. -->
-  <groupId>org.tiger.java.code</groupId>
+  <groupId>org.opentripplanner.java.code</groupId>
   <artifactId>formatter-maven-plugin</artifactId>
   <version>1-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
@@ -36,7 +36,7 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.tiger.java.code</groupId>
+      <groupId>org.opentripplanner.java.code</groupId>
       <artifactId>formatter</artifactId>
       <version>${formatter.version}</version>
     </dependency>

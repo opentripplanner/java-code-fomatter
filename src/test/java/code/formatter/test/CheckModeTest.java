@@ -13,8 +13,8 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.tiger.java.code.formatter.FormatRun;
-import org.tiger.java.code.formatter.JavaCodeFomatter;
+import org.opentripplanner.java.code.formatter.FormatRun;
+import org.opentripplanner.java.code.formatter.JavaCodeFomatter;
 
 /** {@code --check}, the exit codes, and the structured {@link FormatRun} API behind them. */
 class CheckModeTest {

@@ -14,7 +14,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.tiger.java.code.formatter.JavaCodeFomatter;
+import org.opentripplanner.java.code.formatter.JavaCodeFomatter;
 
 /** Directory arguments, the content-hash cache and its self-ignoring folder. */
 class CliCacheTest {

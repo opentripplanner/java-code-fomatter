@@ -45,8 +45,3 @@ cd maven-plugin
 
 This builds the formatter, installs it into the local Maven repository, builds the plugin and runs the integration
 tests in `maven-plugin/src/it`.
-
-## Trying it on a large code base
-
-`./otp-format <folder>` formats a folder of the OpenTripPlanner submodule in place, using the configuration at the
-OTP root.

@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
-import org.tiger.java.code.formatter.SourceFormatter;
+import org.opentripplanner.java.code.formatter.SourceFormatter;
 
 /** The token-equivalence check that proves formatting changed only whitespace and comments. */
 class SameProgramTest {

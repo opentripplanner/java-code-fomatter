@@ -1,4 +1,4 @@
-package org.tiger.java.code.formatter;
+package org.opentripplanner.java.code.formatter;
 
 import java.util.ArrayList;
 import java.util.List;

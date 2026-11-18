@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
-import org.tiger.java.code.formatter.FormatRun;
+import org.opentripplanner.java.code.formatter.FormatRun;
 
 class FormattingTest {
 
@@ -38,10 +38,8 @@ treat it as a starting point.
 Build or download the formatter jar, then run it on the module path:
 
 ```bash
-java -p formatter.jar -m org.tiger.java.code.formatter -w src
+java -p formatter.jar -m org.opentripplanner.java.code.formatter -w src
 ```
-
-The repository's `otp-format` script is an example of this.
 
 ## Note
 

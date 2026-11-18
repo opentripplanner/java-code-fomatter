@@ -44,13 +44,13 @@ You need JDK 25 or newer.
 
 ```bash
 # print the formatted result
-java -m org.tiger.java.code.formatter src/main/java/Foo.java
+java -m org.opentripplanner.java.code.formatter src/main/java/Foo.java
 
 # rewrite a whole tree in place
-java -m org.tiger.java.code.formatter -w src
+java -m org.opentripplanner.java.code.formatter -w src
 
 # CI: list the files that need formatting and exit 1 if there are any
-java -m org.tiger.java.code.formatter --check src
+java -m org.opentripplanner.java.code.formatter --check src
 ```
 
 Add `.jcf/config.properties` at the root of your repository to choose the width and indent:
@@ -68,7 +68,7 @@ Bind the plugin once. `format` rewrites files, `check` fails the build when a fi
 
 ```xml
 <plugin>
-  <groupId>org.tiger.java.code</groupId>
+  <groupId>org.opentripplanner.java.code</groupId>
   <artifactId>formatter-maven-plugin</artifactId>
   <version>1-SNAPSHOT</version>
   <executions>

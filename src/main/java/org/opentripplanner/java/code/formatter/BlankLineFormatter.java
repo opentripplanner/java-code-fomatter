@@ -1,4 +1,4 @@
-package org.tiger.java.code.formatter;
+package org.opentripplanner.java.code.formatter;
 
 import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.ClassTree;

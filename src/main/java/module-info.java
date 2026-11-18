@@ -1,9 +1,9 @@
 /**
- * @jenesis.main org.tiger.java.code.formatter.JavaCodeFomatter
+ * @jenesis.main org.opentripplanner.java.code.formatter.JavaCodeFomatter
  */
-module org.tiger.java.code.formatter {
+module org.opentripplanner.java.code.formatter {
   requires transitive java.compiler;
   requires jdk.compiler;
 
-  exports org.tiger.java.code.formatter;
+  exports org.opentripplanner.java.code.formatter;
 }

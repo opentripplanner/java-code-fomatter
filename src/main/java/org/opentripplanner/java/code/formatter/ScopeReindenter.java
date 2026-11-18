@@ -1,4 +1,4 @@
-package org.tiger.java.code.formatter;
+package org.opentripplanner.java.code.formatter;
 
 /**
  * Reindents Java source purely by brace nesting: the leading whitespace of every line is replaced with

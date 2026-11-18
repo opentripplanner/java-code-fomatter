@@ -1,4 +1,4 @@
-package org.tiger.java.code.formatter;
+package org.opentripplanner.java.code.formatter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

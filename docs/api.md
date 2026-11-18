@@ -1,7 +1,7 @@
 # Java API
 
 The same engine that runs the command line and the Maven plugin is available as a library. The module is
-`org.tiger.java.code.formatter` and it needs `java.compiler` and `jdk.compiler`.
+`org.opentripplanner.java.code.formatter` and it needs `java.compiler` and `jdk.compiler`.
 
 ## FormatRun
 

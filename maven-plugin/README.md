@@ -15,7 +15,7 @@ Requires Maven 3.9+ running on JDK 25 or newer.
 
 ```xml
 <plugin>
-  <groupId>org.tiger.java.code</groupId>
+  <groupId>org.opentripplanner.java.code</groupId>
   <artifactId>formatter-maven-plugin</artifactId>
   <version>1-SNAPSHOT</version>
   <executions>

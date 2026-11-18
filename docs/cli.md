@@ -1,7 +1,7 @@
 # Command line
 
 ```bash
-java -m org.tiger.java.code.formatter [options] <file.java|directory>...
+java -m org.opentripplanner.java.code.formatter [options] <file.java|directory>...
 ```
 
 The formatter is a Java module. Put the jar on the module path (`-p formatter.jar`) if it is not already there. A
@@ -35,10 +35,10 @@ sets exit code 1. Otherwise a build would fail for ever on a line that cannot be
 
 ```bash
 # format what you changed, before a commit
-java -m org.tiger.java.code.formatter -w --changed
+java -m org.opentripplanner.java.code.formatter -w --changed
 
 # the same check that CI runs
-java -m org.tiger.java.code.formatter --check -v src
+java -m org.opentripplanner.java.code.formatter --check -v src
 ```
 
 ## The cache

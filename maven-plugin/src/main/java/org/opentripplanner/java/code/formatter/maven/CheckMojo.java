@@ -1,10 +1,10 @@
-package org.tiger.java.code.formatter.maven;
+package org.opentripplanner.java.code.formatter.maven;
 
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.tiger.java.code.formatter.FormatRun;
+import org.opentripplanner.java.code.formatter.FormatRun;
 
 /** Fails the build if any of the project's Java source files is not formatted. Changes nothing. */
 @Mojo(name = "check", defaultPhase = LifecyclePhase.VERIFY, threadSafe = true,

@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.Properties;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
-import org.tiger.java.code.formatter.FormatterConfig;
+import org.opentripplanner.java.code.formatter.FormatterConfig;
 
 /** The {@code commentRules} setting. */
 class FormatterConfigTest {

@@ -1,4 +1,4 @@
-package org.tiger.java.code.formatter;
+package org.opentripplanner.java.code.formatter;
 
 import java.io.PrintStream;
 import java.nio.file.Files;
@@ -116,7 +116,7 @@ public class JavaCodeFomatter {
   }
 
   private static void printUsage(PrintStream out) {
-    out.println("Usage: java -m org.tiger.java.code.formatter [options] <file.java|directory>...");
+    out.println("Usage: java -m org.opentripplanner.java.code.formatter [options] <file.java|directory>...");
     out.println("  -w, --write     rewrite files in place (default: print the formatted text)");
     out.println("      --check     list the files that would change and exit 1 if there are any; write nothing");
     out.println("      --changed   also format the files git reports as changed or untracked");
