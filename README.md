@@ -55,6 +55,19 @@ indent=2
 | `wrapAtColumn` | `120`   | Column at which a line gets wrapped                    |
 | `indent`       | `4`     | Spaces per indent level, used everywhere (scope, wrapped lines, and each precedence-tier step) |
 
+`commentRules` switches the comment rules (default `all`; or `none`, or a comma-separated list):
+
+| Rule | What it does |
+| ---- | ------------ |
+| `wrap` | Wraps Javadoc and `///` lines that are over the limit. Lines are split, never joined. |
+| `paragraphs` | Every paragraph tag form (`<p>`, `<P>`, `<p/>`, `<p />`, `<p>Text`, a mid-line `<p>`) becomes one `<p>` on its own line; a blank line between two paragraphs becomes `<p>`; a closing `</p>` and a `<p>` before an HTML block are dropped. |
+| `blank-lines` | One blank line before the first block tag (`@param`, ...) and before headings; blank edges trimmed. |
+| `indent` | Continuation lines of block tags and list items get a hanging indent. |
+| `fill` | Joins lines broken too early and refills each line up to the limit. Includes all four rules above. |
+| `line-comments` | Wraps own-line `//` comments that are over the limit. |
+
+Each rule changes only what it owns: with `commentRules=wrap`, nothing but over-long lines is touched.
+
 The config is found **per file**: the `.jcf/config.properties` of every
 directory from the file's own directory up to the *outermost repository root*
 (the topmost ancestor with a `.git` entry - a directory, or the file a

@@ -45,10 +45,17 @@ public final class SourceFormatter {
     // ExpressionWrapper hands multi-line spans (switch expressions, anonymous-class bodies) off
     // verbatim, so after it moves their first line they need reindenting again.
     String expressionWrapped = ScopeReindenter.reindent(ExpressionWrapper.wrap(reindented, config), config.indent());
-    String documented = LineCommentWrapper.format(
-      JavadocFormatter.format(expressionWrapped, config.wrapAtColumn()),
-      config.wrapAtColumn()
-    );
+    String documented = expressionWrapped;
+    JavadocFormatter.Rules docRules = JavadocFormatter.Rules.of(config.commentRules());
+
+    if (docRules.any()) {
+      documented = JavadocFormatter.format(documented, config.wrapAtColumn(), docRules);
+    }
+
+    if (config.commentRules().contains("line-comments")) {
+      documented = LineCommentWrapper.format(documented, config.wrapAtColumn());
+    }
+
     LineWrapper.WrapResult wrapped = LineWrapper.wrap(documented, config.wrapAtColumn(), config.indent());
 
     SyntaxValidator.ValidationResult revalidated = SyntaxValidator.validate(wrapped.text());

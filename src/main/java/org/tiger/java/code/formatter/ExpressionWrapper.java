@@ -82,9 +82,13 @@ final class ExpressionWrapper {
      * out to be.
      */
     Ctx reserving(int n) {
-      return
-        new Ctx(source, unit, positions, new FormatterConfig(Math.max(1, config.wrapAtColumn() - n), config.indent()),
-          scan);
+      return new Ctx(
+        source,
+        unit,
+        positions,
+        new FormatterConfig(Math.max(1, config.wrapAtColumn() - n), config.indent(), config.commentRules()),
+        scan
+      );
     }
   }
 

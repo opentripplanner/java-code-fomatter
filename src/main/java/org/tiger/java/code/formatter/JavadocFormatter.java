@@ -54,10 +54,30 @@ final class JavadocFormatter {
   private JavadocFormatter() {
   }
 
+  /**
+   * Which comment rules apply (see {@link FormatterConfig#COMMENT_RULES}). {@code fill} refills every line and so
+   * includes the other four; without it, lines are kept as they are and only the rules that are on change them.
+   */
+  record Rules(boolean wrap, boolean paragraphs, boolean blankLines, boolean indent, boolean fill) {
+
+    static final Rules ALL = of(FormatterConfig.COMMENT_RULES);
+
+    static Rules of(java.util.Set<String> names) {
+      boolean fill = names.contains("fill");
+
+      return new Rules(fill || names.contains("wrap"), fill || names.contains("paragraphs"),
+        fill || names.contains("blank-lines"), fill || names.contains("indent"), fill);
+    }
+
+    boolean any() {
+      return wrap || paragraphs || blankLines || indent || fill;
+    }
+  }
+
   private record Edit(int start, int end, String replacement) {
   }
 
-  static String format(String source, int wrapAtColumn) {
+  static String format(String source, int wrapAtColumn, Rules rules) {
     LiteralScanner.Scan scan = LiteralScanner.scan(source);
     List<Edit> edits = new ArrayList<>();
     List<LiteralScanner.VerbatimSpan> spans = scan.spans();
@@ -82,7 +102,7 @@ final class JavadocFormatter {
         }
 
         String comment = source.substring(span.start(), span.end());
-        String formatted = formatClassic(comment, indent, wrapAtColumn);
+        String formatted = formatClassic(comment, indent, wrapAtColumn, rules);
 
         if (formatted != null && !formatted.equals(comment)) {
           edits.add(new Edit(span.start(), span.end(), formatted));
@@ -96,7 +116,7 @@ final class JavadocFormatter {
 
         int end = spans.get(last).end();
         String comment = source.substring(span.start(), end);
-        String formatted = formatMarkdown(comment, indent, wrapAtColumn);
+        String formatted = formatMarkdown(comment, indent, wrapAtColumn, rules);
 
         if (formatted != null && !formatted.equals(comment)) {
           edits.add(new Edit(span.start(), end, formatted));
@@ -140,23 +160,25 @@ final class JavadocFormatter {
   // ---- classic /** ... */ ----
 
   /** The reformatted comment, or {@code null} if it should be left as it is. */
-  private static String formatClassic(String comment, String indent, int wrapAtColumn) {
+  private static String formatClassic(String comment, String indent, int wrapAtColumn, Rules rules) {
     String eol = comment.contains("\r\n") ? "\r\n" : "\n";
     String[] rawLines = comment.split("\r?\n", -1);
     boolean singleLine = rawLines.length == 1;
-    List<String> content = classicContent(rawLines);
+    List<String> content = classicContent(rawLines, rules.blankLines());
 
-    if (content.isEmpty()) {
+    if (content.stream().allMatch(String::isBlank)) {
       return null;
     }
 
-    List<String> formatted = layoutClassic(content, wrapAtColumn - indent.length() - 3);
+    List<String> formatted = layoutClassic(content, wrapAtColumn - indent.length() - 3, rules);
 
-    if (formatted == null || !sameWords(content, formatted)) {
+    if (formatted == null || !sameWords(content, formatted) || !rules.fill() && formatted.equals(content)) {
       return null;
     }
 
-    if (formatted.size() == 1 && singleLine && indent.length() + 4 + formatted.get(0).length() + 3 <= wrapAtColumn) {
+    boolean fits = indent.length() + 4 + (formatted.size() == 1 ? formatted.get(0).length() : 0) + 3 <= wrapAtColumn;
+
+    if (formatted.size() == 1 && singleLine && (fits || !(rules.wrap() || rules.fill()))) {
       return "/** " + formatted.get(0) + " */";
     }
 
@@ -169,8 +191,8 @@ final class JavadocFormatter {
     return out.append(eol).append(indent).append(" */").toString();
   }
 
-  /** The comment's text lines: no {@code /**}, {@code *}/}, or leading {@code *}; blank edges trimmed. */
-  private static List<String> classicContent(String[] rawLines) {
+  /** The comment's text lines: no {@code /**}, {@code *}/}, or leading {@code *}; blank edges trimmed if asked. */
+  private static List<String> classicContent(String[] rawLines, boolean trimEdges) {
     List<String> content = new ArrayList<>();
 
     for (int i = 0; i < rawLines.length; i++) {
@@ -189,10 +211,17 @@ final class JavadocFormatter {
         line = trimmed.startsWith("*") ? trimmed.substring(1) : trimmed;
       }
 
-      content.add((line.startsWith(" ") ? line.substring(1) : line).stripTrailing());
+      String text = (line.startsWith(" ") ? line.substring(1) : line).stripTrailing();
+
+      if (text.isBlank() && (i == 0 || i == rawLines.length - 1)) {
+        // nothing after the opening /** or before the closing */: part of the comment's shell
+        continue;
+      }
+
+      content.add(text);
     }
 
-    return trimBlankEdges(content);
+    return trimEdges ? trimBlankEdges(content) : content;
   }
 
   private static List<String> trimBlankEdges(List<String> content) {
@@ -211,32 +240,43 @@ final class JavadocFormatter {
     NONE, TEXT, VERBATIM, STRUCTURE
   }
 
+  /** What a run of text lines is: a plain paragraph, the text of a block tag, or the text of a list item. */
+  private enum Element {
+    PARAGRAPH, TAG, ITEM
+  }
+
   /** Lays out classic content lines within {@code available} columns; {@code null} if it can't safely. */
-  private static List<String> layoutClassic(List<String> content, int available) {
+  private static List<String> layoutClassic(List<String> content, int available, Rules rules) {
     List<String> out = new ArrayList<>();
     List<String> paragraph = new ArrayList<>();
     Kind previous = Kind.NONE;
-    // "", "blank" or "p": what separated the next element from the previous one
+    // "", "blank" or "p": what separated the next element from the previous one; blanks counts the blank lines
     String separator = "";
+    int blanks = 0;
     boolean inTags = false;
     int i = 0;
 
     while (i < content.size()) {
       String line = content.get(i);
       String trimmed = line.strip();
+      boolean closingTag = rules.paragraphs() && PARAGRAPH_CLOSE.matcher(trimmed).matches();
 
-      if (trimmed.isEmpty() || PARAGRAPH_CLOSE.matcher(trimmed).matches()) {
-        previous = flushParagraph(paragraph, out, previous, separator, available, true);
-        separator = separator.equals("p") ? "p" : "blank";
+      if (trimmed.isEmpty() || closingTag) {
+        boolean flushed = !paragraph.isEmpty();
+        String before = separator;
+        previous = flushParagraph(paragraph, out, previous, separator, blanks, available, true, rules);
+        separator = before.equals("p") ? "p" : "blank";
+        blanks = (flushed ? 0 : blanks) + (trimmed.isEmpty() ? 1 : 0);
         i++;
         continue;
       }
 
       Matcher p = HTML_PARAGRAPH.matcher(trimmed);
 
-      if (!inTags && p.matches()) {
-        previous = flushParagraph(paragraph, out, previous, separator, available, true);
+      if (rules.paragraphs() && !inTags && p.matches()) {
+        previous = flushParagraph(paragraph, out, previous, separator, blanks, available, true, rules);
         separator = "p";
+        blanks = 0;
 
         if (!p.group(1).isBlank()) {
           paragraph.add(p.group(1).strip());
@@ -247,30 +287,43 @@ final class JavadocFormatter {
       }
 
       if (blockTag(trimmed) != null) {
-        previous = flushParagraph(paragraph, out, previous, separator, available, true);
+        boolean flushed = !paragraph.isEmpty();
+        previous = flushParagraph(paragraph, out, previous, separator, blanks, available, true, rules);
+
+        if (flushed) {
+          separator = "";
+          blanks = 0;
+        }
 
         if (!inTags) {
           inTags = true;
 
-          if (!out.isEmpty() && !out.get(out.size() - 1).isEmpty()) {
-            out.add("");
+          if (rules.blankLines()) {
+            if (!out.isEmpty() && !out.get(out.size() - 1).isEmpty()) {
+              out.add("");
+            }
+          } else {
+            emitBlockSeparator(out, previous, separator, blanks, rules);
           }
+        } else if (!rules.blankLines()) {
+          emitBlockSeparator(out, previous, separator, blanks, rules);
         }
 
         List<String> block = new ArrayList<>();
-        block.add(trimmed);
+        block.add(line);
         i++;
 
         while (i < content.size() && !content.get(i).isBlank() && blockTag(content.get(i).strip()) == null) {
-          block.add(content.get(i).strip());
+          block.add(content.get(i));
           i++;
         }
 
-        if (!reflowInto(out, block, available, 0, TAG_HANGING_INDENT, false, true)) {
+        if (!reflowInto(out, block, available, 0, TAG_HANGING_INDENT, false, true, rules, Element.TAG)) {
           return null;
         }
 
         separator = "";
+        blanks = 0;
         previous = Kind.TEXT;
         continue;
       }
@@ -278,11 +331,16 @@ final class JavadocFormatter {
       if (inTags) {
         // Text after a blank line in the tag section: keep it as it was, and keep the blank line, or the next
         // pass would take it for a continuation of the tag above.
-        if (!separator.isEmpty() && !out.isEmpty() && !out.get(out.size() - 1).isEmpty()) {
-          out.add("");
+        if (!separator.isEmpty() && !out.isEmpty()) {
+          if (!rules.blankLines()) {
+            addBlanks(out, blanks);
+          } else if (!out.get(out.size() - 1).isEmpty()) {
+            out.add("");
+          }
         }
 
         separator = "";
+        blanks = 0;
         out.add(line);
         i++;
         continue;
@@ -292,23 +350,25 @@ final class JavadocFormatter {
 
       if (verbatimOpen || HTML_STRUCTURAL.matcher(trimmed).matches() || HTML_LIST.matcher(trimmed).matches()) {
         boolean flushed = !paragraph.isEmpty();
-        previous = flushParagraph(paragraph, out, previous, separator, available, true);
+        previous = flushParagraph(paragraph, out, previous, separator, blanks, available, true, rules);
 
         if (flushed) {
           // the paragraph used it; nothing separates it from what follows
           separator = "";
+          blanks = 0;
         }
 
-        if (HTML_HEADING.matcher(trimmed).matches()) {
+        if (rules.blankLines() && HTML_HEADING.matcher(trimmed).matches()) {
           // a heading starts a section: one blank line before it (never a <p>), unless it comes first
           if (!out.isEmpty() && !out.get(out.size() - 1).isEmpty()) {
             out.add("");
           }
         } else {
-          emitBlockSeparator(out, previous, separator);
+          emitBlockSeparator(out, previous, separator, blanks, rules);
         }
 
         separator = "";
+        blanks = 0;
         out.add(line);
         i++;
 
@@ -335,26 +395,29 @@ final class JavadocFormatter {
 
       if (HTML_LIST_ITEM.matcher(trimmed).matches()) {
         boolean flushed = !paragraph.isEmpty();
-        previous = flushParagraph(paragraph, out, previous, separator, available, true);
+        previous = flushParagraph(paragraph, out, previous, separator, blanks, available, true, rules);
 
         if (flushed) {
           // the paragraph used it; nothing separates it from what follows
           separator = "";
+          blanks = 0;
         }
 
-        emitBlockSeparator(out, previous, separator);
+        emitBlockSeparator(out, previous, separator, blanks, rules);
         separator = "";
+        blanks = 0;
         int itemIndent = line.length() - line.stripLeading().length();
         List<String> item = new ArrayList<>();
-        item.add(trimmed);
+        item.add(line);
         i++;
 
         while (i < content.size() && continuesItem(content.get(i).strip())) {
-          item.add(content.get(i).strip());
+          item.add(content.get(i));
           i++;
         }
 
-        if (!reflowInto(out, item, available, itemIndent, itemIndent + LIST_ITEM_HANGING_INDENT, false, true)) {
+        if (!reflowInto(out, item, available, itemIndent, itemIndent + LIST_ITEM_HANGING_INDENT, false, true, rules,
+          Element.ITEM)) {
           return null;
         }
 
@@ -364,15 +427,17 @@ final class JavadocFormatter {
 
       if (inlineTagOpen(line)) {
         boolean flushed = !paragraph.isEmpty();
-        previous = flushParagraph(paragraph, out, previous, separator, available, true);
+        previous = flushParagraph(paragraph, out, previous, separator, blanks, available, true, rules);
 
         if (flushed) {
           // the paragraph used it; nothing separates it from what follows
           separator = "";
+          blanks = 0;
         }
 
-        emitSeparator(out, previous, separator, true);
+        emitSeparator(out, previous, separator, blanks, true, rules);
         separator = "";
+        blanks = 0;
         StringBuilder spanned = new StringBuilder();
 
         do {
@@ -385,13 +450,23 @@ final class JavadocFormatter {
         continue;
       }
 
-      paragraph.add(trimmed);
+      paragraph.add(line);
       i++;
     }
 
-    flushParagraph(paragraph, out, previous, separator, available, true);
+    boolean pending = !paragraph.isEmpty();
+    flushParagraph(paragraph, out, previous, separator, blanks, available, true, rules);
 
-    return trimTrailingBlanks(out);
+    if (rules.blankLines()) {
+      return trimTrailingBlanks(out);
+    }
+
+    if (!pending && separator.equals("blank")) {
+      // trailing blank lines stay unless the blank-lines rule trims them
+      addBlanks(out, blanks);
+    }
+
+    return out;
   }
 
   private static boolean continuesItem(String trimmed) {
@@ -408,23 +483,29 @@ final class JavadocFormatter {
     return out;
   }
 
+  private static void addBlanks(List<String> out, int count) {
+    for (int i = 0; i < count; i++) {
+      out.add("");
+    }
+  }
+
   /** Emits the pending paragraph (reflowed) with the separator before it; returns the new previous kind. */
   private static Kind flushParagraph(List<String> paragraph, List<String> out, Kind previous, String separator,
-    int available, boolean classic) {
+    int blanks, int available, boolean classic, Rules rules) {
     if (paragraph.isEmpty()) {
       return previous;
     }
 
-    if (classic && previous == Kind.TEXT && !separator.isEmpty()) {
+    if (classic && rules.paragraphs() && previous == Kind.TEXT && !separator.isEmpty()) {
       // a blank line between two paragraphs is written as <p>
       out.add("<p>");
     } else {
-      emitSeparator(out, previous, separator, classic);
+      emitSeparator(out, previous, separator, blanks, classic, rules);
     }
 
     List<String> lines = new ArrayList<>(paragraph);
     paragraph.clear();
-    reflowInto(out, lines, available, 0, 0, !classic, classic);
+    reflowInto(out, lines, available, 0, 0, !classic, classic && rules.paragraphs(), rules, Element.PARAGRAPH);
 
     return Kind.TEXT;
   }
@@ -433,23 +514,43 @@ final class JavadocFormatter {
    * The separator before an HTML block ({@code <ul>}, {@code <pre>}, ...): a blank line stays, a {@code <p>} is
    * dropped.
    */
-  private static void emitBlockSeparator(List<String> out, Kind previous, String separator) {
-    if (previous != Kind.NONE && separator.equals("blank")) {
-      out.add("");
-    }
-  }
-
-  private static void emitSeparator(List<String> out, Kind previous, String separator, boolean classic) {
-    if (previous == Kind.NONE || separator.isEmpty()) {
+  private static void emitBlockSeparator(List<String> out, Kind previous, String separator, int blanks, Rules rules) {
+    if (!separator.equals("blank")) {
       return;
     }
 
-    out.add(classic && separator.equals("p") ? "<p>" : "");
+    if (previous != Kind.NONE) {
+      addBlanks(out, rules.blankLines() ? 1 : blanks);
+    } else if (!rules.blankLines()) {
+      addBlanks(out, blanks);
+    }
+  }
+
+  private static void emitSeparator(List<String> out, Kind previous, String separator, int blanks, boolean classic,
+    Rules rules) {
+    if (separator.isEmpty()) {
+      return;
+    }
+
+    if (previous == Kind.NONE) {
+      if (!rules.blankLines() && separator.equals("blank")) {
+        // leading blank lines stay unless the blank-lines rule trims them
+        addBlanks(out, blanks);
+      }
+
+      return;
+    }
+
+    if (classic && rules.paragraphs() && separator.equals("p")) {
+      out.add("<p>");
+    } else {
+      addBlanks(out, rules.blankLines() ? 1 : blanks);
+    }
   }
 
   // ---- Markdown /// ----
 
-  private static String formatMarkdown(String comment, String indent, int wrapAtColumn) {
+  private static String formatMarkdown(String comment, String indent, int wrapAtColumn, Rules rules) {
     String eol = comment.contains("\r\n") ? "\r\n" : "\n";
     List<String> content = new ArrayList<>();
 
@@ -458,15 +559,17 @@ final class JavadocFormatter {
       content.add((line.startsWith(" ") ? line.substring(1) : line).stripTrailing());
     }
 
-    content = trimBlankEdges(content);
+    if (rules.blankLines()) {
+      content = trimBlankEdges(content);
+    }
 
-    if (content.isEmpty()) {
+    if (content.stream().allMatch(String::isBlank)) {
       return null;
     }
 
-    List<String> formatted = layoutMarkdown(content, wrapAtColumn - indent.length() - 4);
+    List<String> formatted = layoutMarkdown(content, wrapAtColumn - indent.length() - 4, rules);
 
-    if (formatted == null || !sameWords(content, formatted)) {
+    if (formatted == null || !sameWords(content, formatted) || !rules.fill() && formatted.equals(content)) {
       return null;
     }
 
@@ -483,7 +586,7 @@ final class JavadocFormatter {
     return out.toString();
   }
 
-  private static List<String> layoutMarkdown(List<String> content, int available) {
+  private static List<String> layoutMarkdown(List<String> content, int available, Rules rules) {
     List<String> out = new ArrayList<>();
     List<String> paragraph = new ArrayList<>();
     boolean inTags = false;
@@ -494,11 +597,13 @@ final class JavadocFormatter {
       String trimmed = line.strip();
 
       if (trimmed.isEmpty()) {
-        if (!flushMarkdownParagraph(paragraph, out, available)) {
+        if (!flushMarkdownParagraph(paragraph, out, available, rules)) {
           return null;
         }
 
-        if (!out.isEmpty() && !out.get(out.size() - 1).isEmpty()) {
+        if (!rules.blankLines()) {
+          out.add("");
+        } else if (!out.isEmpty() && !out.get(out.size() - 1).isEmpty()) {
           out.add("");
         }
 
@@ -512,11 +617,12 @@ final class JavadocFormatter {
 
       if (fence || indentedCode || MD_HEADING.matcher(line).matches() || MD_THEMATIC_BREAK.matcher(line).matches()
         || trimmed.startsWith("|") || trimmed.startsWith(">")) {
-        if (!flushMarkdownParagraph(paragraph, out, available)) {
+        if (!flushMarkdownParagraph(paragraph, out, available, rules)) {
           return null;
         }
 
-        if (MD_HEADING.matcher(line).matches() && !out.isEmpty() && !out.get(out.size() - 1).isEmpty()) {
+        if (rules.blankLines() && MD_HEADING.matcher(line).matches() && !out.isEmpty()
+          && !out.get(out.size() - 1).isEmpty()) {
           // a heading starts a section: one blank line before it
           out.add("");
         }
@@ -551,28 +657,28 @@ final class JavadocFormatter {
       }
 
       if (blockTag(trimmed) != null) {
-        if (!flushMarkdownParagraph(paragraph, out, available)) {
+        if (!flushMarkdownParagraph(paragraph, out, available, rules)) {
           return null;
         }
 
         if (!inTags) {
           inTags = true;
 
-          if (!out.isEmpty() && !out.get(out.size() - 1).isEmpty()) {
+          if (rules.blankLines() && !out.isEmpty() && !out.get(out.size() - 1).isEmpty()) {
             out.add("");
           }
         }
 
         List<String> block = new ArrayList<>();
-        block.add(trimmed);
+        block.add(line);
         i++;
 
         while (i < content.size() && !content.get(i).isBlank() && blockTag(content.get(i).strip()) == null) {
-          block.add(content.get(i).strip());
+          block.add(content.get(i));
           i++;
         }
 
-        if (!reflowInto(out, block, available, 0, TAG_HANGING_INDENT, true, false)) {
+        if (!reflowInto(out, block, available, 0, TAG_HANGING_INDENT, true, false, rules, Element.TAG)) {
           return null;
         }
 
@@ -582,24 +688,25 @@ final class JavadocFormatter {
       Matcher item = MD_LIST_ITEM.matcher(line);
 
       if (!inTags && item.matches()) {
-        if (!flushMarkdownParagraph(paragraph, out, available)) {
+        if (!flushMarkdownParagraph(paragraph, out, available, rules)) {
           return null;
         }
 
         int itemIndent = item.group(1).length();
         String marker = item.group(2);
         List<String> text = new ArrayList<>();
-        text.add(marker + " " + item.group(3).strip());
+        text.add(rules.fill() ? marker + " " + item.group(3).strip() : line);
         i++;
 
         while (i < content.size() && !content.get(i).isBlank() && !MD_LIST_ITEM.matcher(content.get(i)).matches()
           && !MD_FENCE.matcher(content.get(i)).matches() && !MD_HEADING.matcher(content.get(i)).matches()
           && blockTag(content.get(i).strip()) == null) {
-          text.add(content.get(i).strip());
+          text.add(content.get(i));
           i++;
         }
 
-        if (!reflowInto(out, text, available, itemIndent, itemIndent + marker.length() + 1, true, false)) {
+        if (!reflowInto(out, text, available, itemIndent, itemIndent + marker.length() + 1, true, false, rules,
+          Element.ITEM)) {
           return null;
         }
 
@@ -616,15 +723,15 @@ final class JavadocFormatter {
       i++;
     }
 
-    if (!flushMarkdownParagraph(paragraph, out, available)) {
+    if (!flushMarkdownParagraph(paragraph, out, available, rules)) {
       return null;
     }
 
-    return trimTrailingBlanks(out);
+    return rules.blankLines() ? trimTrailingBlanks(out) : out;
   }
 
   /** Reflows the pending Markdown paragraph, or copies it if it has hard line breaks; false if it can't. */
-  private static boolean flushMarkdownParagraph(List<String> paragraph, List<String> out, int available) {
+  private static boolean flushMarkdownParagraph(List<String> paragraph, List<String> out, int available, Rules rules) {
     if (paragraph.isEmpty()) {
       return true;
     }
@@ -638,18 +745,22 @@ final class JavadocFormatter {
       return true;
     }
 
-    List<String> stripped = new ArrayList<>();
-    lines.forEach(l -> stripped.add(l.strip()));
-
-    return reflowInto(out, stripped, available, 0, 0, true, false);
+    return reflowInto(out, lines, available, 0, 0, true, false, rules, Element.PARAGRAPH);
   }
 
   // ---- shared ----
 
-  /** Appends {@code lines} joined and refilled; false if a token would be altered. */
+  /**
+   * Appends the text lines of one element. With {@code fill}, they are joined and refilled up to the limit; without it,
+   * each line is kept and only the rules that are on touch it. False if a token would be altered.
+   */
   private static boolean reflowInto(List<String> out, List<String> lines, int available, int firstIndent,
-    int hangingIndent, boolean markdown, boolean paragraphTags) {
-    String joined = String.join(" ", lines);
+    int hangingIndent, boolean markdown, boolean paragraphTags, Rules rules, Element element) {
+    if (!rules.fill()) {
+      return keepLines(out, lines, available, hangingIndent, markdown, paragraphTags, rules, element);
+    }
+
+    String joined = String.join(" ", lines.stream().map(String::strip).toList());
 
     if (paragraphTags && joined.toLowerCase().contains("<pre")) {
       // verbatim text in the middle of a line: leave the whole comment as it is
@@ -706,6 +817,142 @@ final class JavadocFormatter {
     }
 
     return true;
+  }
+
+  /** Keeps each line of an element as it is, applying only the rules that are on. */
+  private static boolean keepLines(List<String> out, List<String> lines, int available, int hangingIndent,
+    boolean markdown, boolean paragraphTags, Rules rules, Element element) {
+    for (int index = 0; index < lines.size(); index++) {
+      String line = lines.get(index).stripTrailing();
+
+      if (!markdown && line.toLowerCase().contains("<pre")) {
+        // verbatim text in the middle of a line: leave the whole comment as it is
+        return false;
+      }
+
+      List<String> pieces = List.of(line);
+
+      if (rules.paragraphs() && paragraphTags) {
+        pieces = splitAtParagraphTags(line, element, hangingIndent);
+
+        if (pieces == null) {
+          return false;
+        }
+      }
+
+      for (int pieceIndex = 0; pieceIndex < pieces.size(); pieceIndex++) {
+        String text = pieces.get(pieceIndex);
+        boolean paragraphTag = text.strip().equals("<p>");
+
+        if (paragraphTag && !out.isEmpty() && out.get(out.size() - 1).strip().equals("<p>")) {
+          continue;
+        }
+
+        if (rules.indent() && element != Element.PARAGRAPH && (index > 0 || pieceIndex > 0) && !text.isBlank()) {
+          text = " ".repeat(hangingIndent) + text.strip();
+        }
+
+        if (rules.wrap() && !paragraphTag) {
+          out.addAll(wrapLine(text, available, markdown, element, index == 0 && pieceIndex == 0, hangingIndent));
+        } else {
+          out.add(text);
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * {@code line} cut at each paragraph tag (any form), which goes on a line of its own; a closing tag is dropped. The
+   * line itself if it has none; {@code null} if it can't safely be tokenized.
+   */
+  private static List<String> splitAtParagraphTags(String line, Element element, int hangingIndent) {
+    List<String> tokens = tokenize(line.strip(), false, true);
+
+    if (tokens == null) {
+      return null;
+    }
+
+    boolean changed = tokens.contains("<p>")
+      || !String.join("", tokens).replaceAll("\\s+", "").equals(line.replaceAll("\\s+", ""));
+
+    if (!changed) {
+      return List.of(line);
+    }
+
+    String lead = line.substring(0, line.length() - line.stripLeading().length());
+    String tagPrefix = element == Element.PARAGRAPH ? "" : " ".repeat(hangingIndent);
+    String restPrefix = element == Element.PARAGRAPH ? lead : tagPrefix;
+    List<String> pieces = new ArrayList<>();
+    StringBuilder current = new StringBuilder(lead);
+    boolean empty = true;
+
+    for (String token : tokens) {
+      if (token.equals("<p>")) {
+        if (!empty) {
+          pieces.add(current.toString());
+        }
+
+        pieces.add(tagPrefix + "<p>");
+        current = new StringBuilder(restPrefix);
+        empty = true;
+        continue;
+      }
+
+      if (!empty) {
+        current.append(' ');
+      }
+
+      current.append(token);
+      empty = false;
+    }
+
+    if (!empty) {
+      pieces.add(current.toString());
+    }
+
+    return pieces;
+  }
+
+  /** {@code text} split at spaces if it is longer than {@code available}; each rest line continues the indent. */
+  private static List<String> wrapLine(String text, int available, boolean markdown, Element element, boolean first,
+    int hangingIndent) {
+    if (text.length() <= available) {
+      return List.of(text);
+    }
+
+    String body = text.stripLeading();
+    String lead = text.substring(0, text.length() - body.length());
+    List<String> tokens = tokenize(body, markdown, false);
+
+    if (tokens == null || tokens.size() < 2) {
+      return List.of(text);
+    }
+
+    String restPrefix = element != Element.PARAGRAPH && first ? " ".repeat(hangingIndent) : lead;
+    List<String> lines = new ArrayList<>();
+    StringBuilder current = new StringBuilder(lead);
+    boolean empty = true;
+
+    for (String token : tokens) {
+      if (!empty && current.length() + 1 + token.length() > available) {
+        lines.add(current.toString());
+        current = new StringBuilder(restPrefix);
+        empty = true;
+      }
+
+      if (!empty) {
+        current.append(' ');
+      }
+
+      current.append(token);
+      empty = false;
+    }
+
+    lines.add(current.toString());
+
+    return lines;
   }
 
   /**

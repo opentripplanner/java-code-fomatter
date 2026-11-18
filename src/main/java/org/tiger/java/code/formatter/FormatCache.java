@@ -52,6 +52,7 @@ final class FormatCache {
   static Key key(byte[] content, FormatterConfig config) {
     MessageDigest digest = sha256();
     digest.update(ByteBuffer.allocate(8).putInt(config.wrapAtColumn()).putInt(config.indent()).array());
+    digest.update(String.join(",", config.commentRules()).getBytes(StandardCharsets.UTF_8));
     digest.update(content);
     ByteBuffer hash = ByteBuffer.wrap(digest.digest());
     return new Key(hash.getLong(), hash.getLong());
