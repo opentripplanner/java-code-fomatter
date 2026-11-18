@@ -1,4 +1,4 @@
-# Java code formatter
+# Java Code Formatter
 
 Most people do not read code like a novel, more like an encyclopedia. They scan it from top to bottom, and only then
 from left to right. Therefore, scanning down the file should be fast and provide the reader with easy access to the
@@ -8,13 +8,7 @@ Scope matters, code that has the same scope should have the same indention - eit
 listed in one column. Important information goes _first_ on the line so you do not have to scan to the end to see it! 
 For example operators go first on a wrapped line, so the left edge reads as a list of what is being combined. A line
 that is too long is broken where the expression itself divides: at the operator that binds the weakest (`+` before `*`),
-not at the last space before the column limit. Each part then gets its own line, indented one level. 
-
-- Javadoc and comments are formatted too.
-- It is fast(only changes are scanned)
-- It is built to run in CI
-- It is safe, and it can never change what your program does.
-
+not at the last space before the column limit. Each part then gets its own line, indented one level.
 
 ```java
 // before: one 160-character line
@@ -39,6 +33,8 @@ String message =
   included. See [Maven](maven-plugin/README.md), [Jenesis](docs/jenesis.md) and the [API](docs/api.md).
 - **Format Javadoc and comments as well.** `<p>` tags, blank lines before `@param`, hanging indents and line fill are
   all handled, and each rule can be switched off. See [Comments and Javadoc](docs/comments.md).
+- **Safe.** The formatter can never change what your program does: it compares the tokens before and after, and
+  writes nothing if they differ. See [Safety](docs/safety.md).
 - **One small config file.** Two keys cover most projects, and the file is layered per directory. See
   [Configuration](docs/configuration.md).
 
