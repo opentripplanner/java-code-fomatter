@@ -1,0 +1,96 @@
+class A {
+    /**
+     * A summary sentence that was wrapped far too early by
+     * hand so it should be joined and filled up to the
+     * limit again.
+     */
+    void early() {
+    }
+
+    /** Short one-liner. */
+    void oneLiner() {
+    }
+
+    /**
+     * A one-liner that is far too long to stay on a single
+     * line at this width.
+     */
+    void longOneLiner() {
+    }
+
+    /**
+     * First paragraph of the description.
+     * <p>
+     * Second paragraph separated only by a blank line.
+     * <p>
+     * Third paragraph written Google style.
+     * <p>
+     * Fourth paragraph after a blank line and a p tag.
+     * <p>
+     * Fifth paragraph with the tag alone.
+     */
+    void paragraphs() {
+    }
+
+    /**
+     * Lists, both kinds alike:
+     * <ul>
+     *   <li>first bullet that is long enough to need
+     *       wrapping onto a second line
+     *   <li>short bullet
+     * </ul>
+     * <ol>
+     *   <li>first numbered item that is long enough to need
+     *       wrapping onto a second line
+     *   <li>short item
+     * </ol>
+     */
+    void lists() {
+    }
+
+    /**
+     * Keeps inline tags whole:
+     * {@link java.util.Map#computeIfAbsent(Object, java.util.function.Function)}
+     * and {@code a long code sample} stay in one piece.
+     *
+     * <pre>
+     *   verbatim   text   stays
+     *     exactly as written even when it is much longer than the limit allows
+     * </pre>
+     *
+     * @param name the name which is described in a sentence
+     *     that needs a second line
+     * @param other short
+     * @return the result, also described in a sentence that
+     *     needs more than one line to say
+     */
+    int tags(String name, int other) {
+        return 0;
+    }
+
+    /**
+     * Free text after the tags, separated by a blank line,
+     * stays separate.
+     *
+     * @param skip skip generating doc for this node, it is
+     *     documented in the parent node.
+     *
+     * TODO DOC - add unit tests on this class
+     */
+    void trailing(int skip) {
+    }
+
+    /**
+     * IMPLEMENTATION DETAILS
+     * <p>
+     * There are two ways we can treat the group:
+     * <ol>
+     *   <li>assign group id 1 to the base group
+     *   <li>assign group id 0 to the base group
+     * </ol>
+     *
+     * A closing paragraph after the list.
+     */
+    void listAfterParagraph() {
+    }
+}

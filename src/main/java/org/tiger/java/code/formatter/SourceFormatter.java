@@ -6,9 +6,9 @@ import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
 /**
- * Orchestrates the formatting pipeline: validate the input is syntactically valid Java, reindent
- * by brace/scope nesting, wrap lines over {@link FormatterConfig#wrapAtColumn()} columns, then
- * re-validate the result as a safety net before it's ever written or printed.
+ * Orchestrates the formatting pipeline: validate the input is syntactically valid Java, reindent by brace/scope
+ * nesting, wrap lines over {@link FormatterConfig#wrapAtColumn()} columns, then re-validate the result as a safety net
+ * before it's ever written or printed.
  */
 public final class SourceFormatter {
 
@@ -45,7 +45,8 @@ public final class SourceFormatter {
     // ExpressionWrapper hands multi-line spans (switch expressions, anonymous-class bodies) off
     // verbatim, so after it moves their first line they need reindenting again.
     String expressionWrapped = ScopeReindenter.reindent(ExpressionWrapper.wrap(reindented, config), config.indent());
-    LineWrapper.WrapResult wrapped = LineWrapper.wrap(expressionWrapped, config.wrapAtColumn(), config.indent());
+    String documented = JavadocFormatter.format(expressionWrapped, config.wrapAtColumn());
+    LineWrapper.WrapResult wrapped = LineWrapper.wrap(documented, config.wrapAtColumn(), config.indent());
 
     SyntaxValidator.ValidationResult revalidated = SyntaxValidator.validate(wrapped.text());
 

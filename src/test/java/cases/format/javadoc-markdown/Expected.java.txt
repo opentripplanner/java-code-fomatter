@@ -1,0 +1,38 @@
+class A {
+    /// A summary sentence that was wrapped far too early by
+    /// hand so it should be joined and filled up to the
+    /// limit again.
+    void early() {
+    }
+
+    /// First paragraph.
+    ///
+    /// Second paragraph, separated by a blank line and
+    /// never by a p tag, long enough to wrap.
+    ///
+    /// - first bullet that is long enough to need wrapping
+    ///   onto a second line
+    /// - short bullet
+    ///
+    /// 1. first numbered item that is long enough to need
+    ///    wrapping onto a second line
+    /// 2. short item
+    ///
+    /// Inline code like `a code span with spaces` is never
+    /// broken, and [Map#get] links stay whole.
+    ///
+    /// ```java
+    /// int   verbatim   =   1;     // code fences are copied exactly as written, however long they are
+    /// ```
+    ///
+    /// | table | cells |
+    /// | ----- | ----- |
+    ///
+    /// @param name the name which is described in a
+    ///     sentence that needs a second line
+    /// @return the result, also described in a sentence
+    ///     that needs more than one line to say
+    int tags(String name) {
+        return 0;
+    }
+}

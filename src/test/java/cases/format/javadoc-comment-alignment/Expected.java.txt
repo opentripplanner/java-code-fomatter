@@ -3,8 +3,7 @@ package sample;
 public class Doc {
     public void run() {
         /**
-         * Nested comment.
-         * More detail.
+         * Nested comment. More detail.
          */
         doA();
     }
