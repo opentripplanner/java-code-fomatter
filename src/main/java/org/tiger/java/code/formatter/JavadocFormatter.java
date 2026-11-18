@@ -41,7 +41,9 @@ final class JavadocFormatter {
   );
   private static final Pattern HTML_LIST = Pattern.compile("(?i)^</?(ul|ol)\\b.*");
   private static final Pattern HTML_LIST_ITEM = Pattern.compile("(?i)^<li\\b.*");
-  private static final Pattern HTML_PARAGRAPH = Pattern.compile("(?i)^<p\\b[^>]*>(.*)");
+  private static final Pattern PARAGRAPH_TAG = Pattern.compile("(?i)<p\\s*/?>");
+  private static final Pattern PARAGRAPH_CLOSE = Pattern.compile("(?i)</p\\s*>");
+  private static final Pattern HTML_PARAGRAPH = Pattern.compile("(?i)^<p\\s*/?>(.*)");
   private static final Pattern MD_LIST_ITEM = Pattern.compile("^(\\s*)([-*+]|\\d{1,9}[.)])\\s+(\\S.*)$");
   private static final Pattern MD_FENCE = Pattern.compile("^\\s*(```|~~~).*");
   private static final Pattern MD_HEADING = Pattern.compile("^\\s{0,3}#{1,6}(\\s.*)?$");
@@ -223,7 +225,7 @@ final class JavadocFormatter {
       String line = content.get(i);
       String trimmed = line.strip();
 
-      if (trimmed.isEmpty()) {
+      if (trimmed.isEmpty() || PARAGRAPH_CLOSE.matcher(trimmed).matches()) {
         previous = flushParagraph(paragraph, out, previous, separator, available, true);
         separator = separator.equals("p") ? "p" : "blank";
         i++;
@@ -264,7 +266,7 @@ final class JavadocFormatter {
           i++;
         }
 
-        if (!reflowInto(out, block, available, 0, TAG_HANGING_INDENT, false)) {
+        if (!reflowInto(out, block, available, 0, TAG_HANGING_INDENT, false, true)) {
           return null;
         }
 
@@ -352,7 +354,7 @@ final class JavadocFormatter {
           i++;
         }
 
-        if (!reflowInto(out, item, available, itemIndent, itemIndent + LIST_ITEM_HANGING_INDENT, false)) {
+        if (!reflowInto(out, item, available, itemIndent, itemIndent + LIST_ITEM_HANGING_INDENT, false, true)) {
           return null;
         }
 
@@ -422,7 +424,7 @@ final class JavadocFormatter {
 
     List<String> lines = new ArrayList<>(paragraph);
     paragraph.clear();
-    reflowInto(out, lines, available, 0, 0, !classic);
+    reflowInto(out, lines, available, 0, 0, !classic, classic);
 
     return Kind.TEXT;
   }
@@ -570,7 +572,7 @@ final class JavadocFormatter {
           i++;
         }
 
-        if (!reflowInto(out, block, available, 0, TAG_HANGING_INDENT, true)) {
+        if (!reflowInto(out, block, available, 0, TAG_HANGING_INDENT, true, false)) {
           return null;
         }
 
@@ -597,7 +599,7 @@ final class JavadocFormatter {
           i++;
         }
 
-        if (!reflowInto(out, text, available, itemIndent, itemIndent + marker.length() + 1, true)) {
+        if (!reflowInto(out, text, available, itemIndent, itemIndent + marker.length() + 1, true, false)) {
           return null;
         }
 
@@ -639,15 +641,22 @@ final class JavadocFormatter {
     List<String> stripped = new ArrayList<>();
     lines.forEach(l -> stripped.add(l.strip()));
 
-    return reflowInto(out, stripped, available, 0, 0, true);
+    return reflowInto(out, stripped, available, 0, 0, true, false);
   }
 
   // ---- shared ----
 
   /** Appends {@code lines} joined and refilled; false if a token would be altered. */
   private static boolean reflowInto(List<String> out, List<String> lines, int available, int firstIndent,
-    int hangingIndent, boolean markdown) {
-    List<String> tokens = tokenize(String.join(" ", lines), markdown);
+    int hangingIndent, boolean markdown, boolean paragraphTags) {
+    String joined = String.join(" ", lines);
+
+    if (paragraphTags && joined.toLowerCase().contains("<pre")) {
+      // verbatim text in the middle of a line: leave the whole comment as it is
+      return false;
+    }
+
+    List<String> tokens = tokenize(joined, markdown, paragraphTags);
 
     if (tokens == null) {
       return false;
@@ -655,8 +664,29 @@ final class JavadocFormatter {
 
     StringBuilder current = new StringBuilder(" ".repeat(firstIndent));
     boolean empty = true;
+    boolean paragraphBreak = false;
 
     for (String token : tokens) {
+      if (paragraphTags && token.equals("<p>")) {
+        // any form of the paragraph tag in the middle of the text: it ends the line and stands alone
+        if (!empty) {
+          out.add(current.toString());
+          current = new StringBuilder(" ".repeat(hangingIndent));
+          empty = true;
+        }
+
+        paragraphBreak = true;
+        continue;
+      }
+
+      if (paragraphBreak) {
+        paragraphBreak = false;
+
+        if (!out.isEmpty() && !out.get(out.size() - 1).strip().equals("<p>")) {
+          out.add(" ".repeat(hangingIndent) + "<p>");
+        }
+      }
+
       if (!empty && current.length() + 1 + token.length() > available) {
         out.add(current.toString());
         current = new StringBuilder(" ".repeat(hangingIndent));
@@ -682,7 +712,7 @@ final class JavadocFormatter {
    * Splits text at whitespace, keeping {@code {@...}} inline tags in one piece, HTML tags ({@code <...>}) in one piece,
    * and (Markdown) backtick code spans in one piece.
    */
-  private static List<String> tokenize(String text, boolean markdown) {
+  private static List<String> tokenize(String text, boolean markdown, boolean paragraphTags) {
     List<String> tokens = new ArrayList<>();
     StringBuilder token = new StringBuilder();
     int braces = 0;
@@ -691,6 +721,28 @@ final class JavadocFormatter {
 
     for (int i = 0; i < text.length(); i++) {
       char c = text.charAt(i);
+
+      if (paragraphTags && c == '<' && braces == 0 && !tag) {
+        // <p>, <P>, <p/> and <p /> are one paragraph break; a closing </p> is dropped
+        Matcher open = PARAGRAPH_TAG.matcher(text).region(i, text.length());
+        Matcher close = PARAGRAPH_CLOSE.matcher(text).region(i, text.length());
+
+        if (open.lookingAt() || close.lookingAt()) {
+          if (!token.isEmpty()) {
+            tokens.add(token.toString());
+            token.setLength(0);
+          }
+
+          if (open.lookingAt()) {
+            tokens.add("<p>");
+            i += open.end() - i - 1;
+          } else {
+            i += close.end() - i - 1;
+          }
+
+          continue;
+        }
+      }
 
       if (markdown && c == '`' && braces == 0) {
         int run = 1;
@@ -784,6 +836,6 @@ final class JavadocFormatter {
   }
 
   private static String normalize(List<String> lines) {
-    return String.join("", lines).replaceAll("(?i)<p\\s*/?>", "").replaceAll("\\s+", "");
+    return String.join("", lines).replaceAll("(?i)</?p\\s*/?>", "").replaceAll("\\s+", "");
   }
 }

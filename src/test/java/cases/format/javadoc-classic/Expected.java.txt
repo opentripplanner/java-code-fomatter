@@ -134,4 +134,51 @@ class A {
      */
     void selfClosingParagraph() {
     }
+
+    /**
+     * Every form of the paragraph tag becomes a single p
+     * tag on its own line.
+     * <p>
+     * Upper case.
+     * <p>
+     * Self closing.
+     * <p>
+     * Self closing with a space.
+     * <p>
+     * Opening tag with text on the same line. Text in the
+     * middle of a line
+     * <p>
+     * continues in a new paragraph. A closing tag is
+     * dropped.
+     * <p>
+     * Written as a pair.
+     * <p>
+     * Code like {@code <p>} stays untouched.
+     */
+    void paragraphForms() {
+    }
+
+    /**
+     * An inline <pre>a <p> in   verbatim text</pre> in the middle of a sentence leaves the whole comment alone.
+     * <p/>
+     * Even this paragraph.
+     */
+    void inlinePre() {
+    }
+
+    /**
+     * A summary.
+     *
+     * @return the first paragraph of the return
+     *     description.
+     *     <p>
+     *     The second paragraph of it, which is long enough
+     *     to need wrapping onto another line.
+     * @see #other
+     *     <p>
+     *     Even a see tag can have two paragraphs.
+     */
+    int tagParagraphs() {
+        return 0;
+    }
 }
