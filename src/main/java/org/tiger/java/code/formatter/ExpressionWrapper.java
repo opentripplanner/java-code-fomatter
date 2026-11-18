@@ -595,7 +595,7 @@ final class ExpressionWrapper {
   }
 
   /** `for (Type v : expr) {`: the whole `Type v : expr` on one line if it fits one level in,
-   * else `Type v :` followed by the iterated expression one level deeper still. */
+   * else `Type v` followed by `: expr` on the next line, level with it. */
   private static void tryWrapForEachHeader(EnhancedForLoopTree node, Ctx ctx, List<Edit> edits) {
     int ownerStart = ctx.start(node);
     int open = ctx.source().indexOf('(', ownerStart);
@@ -616,10 +616,13 @@ final class ExpressionWrapper {
         return List.of(" ".repeat(indent) + declaration + " : " + expression);
       }
 
-      int innerIndent = (level + 2) * ctx.indentWidth();
+      // Operator-first, like every other separator: the `:` starts the second line, level with the
+      // declaration above it (siblings share one indent level).
       List<String> lines = new ArrayList<>();
-      lines.add(" ".repeat(indent) + declaration + " :");
-      lines.addAll(indented(render(node.getExpression(), innerIndent, level + 2, ctx), innerIndent));
+      lines.add(" ".repeat(indent) + declaration);
+      List<String> source = render(node.getExpression(), indent + 2, levelFor(node.getExpression(), level + 1), ctx);
+      lines.add(" ".repeat(indent) + ": " + source.get(0));
+      lines.addAll(source.subList(1, source.size()));
       return lines;
     });
   }

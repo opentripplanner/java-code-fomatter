@@ -9,5 +9,8 @@ class A {
         for (Source sourceOne : repository.getSourcesNowAll()) {
             run();
         }
+        for (Source chainSource : repository.getSourcesNowAll().stream().filter(Source::isActive).toList()) {
+            run();
+        }
     }
 }

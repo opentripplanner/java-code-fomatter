@@ -1,21 +1,32 @@
 class A {
     void f() {
         for (
-            Source source :
-                dataSources.getOsmConfiguredDataSource()
+            Source source
+            : dataSources.getOsmConfiguredDataSource()
         ) {
             run();
         }
 
         for (
-            ConfiguredDataSource<OsmExtractParameters> osmSource :
-                dataSources.getOsmConfiguredDataSource()
+            ConfiguredDataSource<OsmExtractParameters> osmSource
+            : dataSources.getOsmConfiguredDataSource()
         ) {
             run();
         }
 
         for (
             Source sourceOne : repository.getSourcesNowAll()
+        ) {
+            run();
+        }
+
+        for (
+            Source chainSource
+            : repository
+                .getSourcesNowAll()
+                .stream()
+                .filter(Source::isActive)
+                .toList()
         ) {
             run();
         }
