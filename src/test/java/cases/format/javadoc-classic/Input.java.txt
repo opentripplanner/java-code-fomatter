@@ -101,4 +101,27 @@ class A {
      */
     void tagsBeforeBlocks() {
     }
+
+    /**
+     * <h2>Heading first stays first</h2>
+     * A trip is rejected when it is outside the passenger's window.
+     * <h2>Variables</h2>
+     * Text directly after a heading.
+     * <p>
+     * <h3>A heading with a p tag in front</h3>
+     * More text.
+     */
+    void headings() {
+    }
+
+    /**
+     * A summary.
+     *
+     * <p>
+     * <p/>
+     * <h3>Exception management</h3>
+     * Text under the heading.
+     */
+    void selfClosingParagraph() {
+    }
 }

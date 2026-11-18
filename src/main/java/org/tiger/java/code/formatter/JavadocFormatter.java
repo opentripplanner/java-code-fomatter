@@ -35,6 +35,7 @@ final class JavadocFormatter {
     "implNote", "provides", "uses", "spec");
 
   private static final Pattern HTML_VERBATIM_OPEN = Pattern.compile("(?i)^<(pre|table|dl|blockquote)\\b.*");
+  private static final Pattern HTML_HEADING = Pattern.compile("(?i)^<h[1-6]\\b.*");
   private static final Pattern HTML_STRUCTURAL = Pattern.compile(
     "(?i)^</?(h[1-6]|hr|tr|th|td|dt|dd|thead|tbody|tfoot|caption|div)\\b.*"
   );
@@ -296,7 +297,15 @@ final class JavadocFormatter {
           separator = "";
         }
 
-        emitBlockSeparator(out, previous, separator);
+        if (HTML_HEADING.matcher(trimmed).matches()) {
+          // a heading starts a section: one blank line before it (never a <p>), unless it comes first
+          if (!out.isEmpty() && !out.get(out.size() - 1).isEmpty()) {
+            out.add("");
+          }
+        } else {
+          emitBlockSeparator(out, previous, separator);
+        }
+
         separator = "";
         out.add(line);
         i++;
@@ -503,6 +512,11 @@ final class JavadocFormatter {
         || trimmed.startsWith("|") || trimmed.startsWith(">")) {
         if (!flushMarkdownParagraph(paragraph, out, available)) {
           return null;
+        }
+
+        if (MD_HEADING.matcher(line).matches() && !out.isEmpty() && !out.get(out.size() - 1).isEmpty()) {
+          // a heading starts a section: one blank line before it
+          out.add("");
         }
 
         out.add(line);
@@ -770,6 +784,6 @@ final class JavadocFormatter {
   }
 
   private static String normalize(List<String> lines) {
-    return String.join("", lines).replaceAll("(?i)<p>", "").replaceAll("\\s+", "");
+    return String.join("", lines).replaceAll("(?i)<p\\s*/?>", "").replaceAll("\\s+", "");
   }
 }

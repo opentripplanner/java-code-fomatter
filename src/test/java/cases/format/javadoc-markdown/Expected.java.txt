@@ -35,4 +35,13 @@ class A {
     int tags(String name) {
         return 0;
     }
+
+    /// A trip is rejected when it is outside the
+    /// passenger's window.
+    ///
+    /// ## Variables
+    /// Text directly after a heading.
+    int headings() {
+        return 0;
+    }
 }
