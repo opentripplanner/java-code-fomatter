@@ -10,6 +10,7 @@ import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.ForLoopTree;
 import com.sun.source.tree.IfTree;
 import com.sun.source.tree.LambdaExpressionTree;
+import com.sun.source.tree.LiteralTree;
 import com.sun.source.tree.MemberSelectTree;
 import com.sun.source.tree.MethodInvocationTree;
 import com.sun.source.tree.ParenthesizedTree;
@@ -250,6 +251,12 @@ final class ExpressionWrapper {
 
     /** `keyword expr;` (`return`/`throw`): same rule - keyword glues only for always-glue constructs. */
     private static void tryWrapKeyword(String keyword, Tree owner, ExpressionTree expr, Ctx ctx, List<Edit> edits) {
+        if (expr instanceof LiteralTree) {
+            // `return "…long string…";` - a lone literal can't be split, and moving it to its own
+            // line only trades a long line for a long line (unlike a declaration, where the
+            // string conventionally moves under the `=`).
+            return;
+        }
         tryWrapKeywordLike(keyword, owner, expr, ctx, edits);
     }
 
@@ -687,7 +694,8 @@ final class ExpressionWrapper {
         int indent = dotLevel * ctx.indentWidth();
         int first = 1;
         String headText = ctx.text(head.tree());
-        if (receiver.size() == 1 && isFactoryHead(headText, ctx.indentWidth())) {
+        boolean stringHead = head.tree() instanceof LiteralTree lt && lt.getKind() == Tree.Kind.STRING_LITERAL;
+        if (receiver.size() == 1 && (stringHead || isFactoryHead(headText, ctx.indentWidth()))) {
             // `Type.factory(...)` / short receivers keep their first call on the head's line.
             Segment.Dot dot = (Segment.Dot) segments.get(1);
             int identifierStart = ctx.end(dot.select()) - dot.name().length();

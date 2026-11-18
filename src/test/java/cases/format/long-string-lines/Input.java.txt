@@ -1,0 +1,20 @@
+class A {
+    String f(Mode mode) {
+        return "A long description string that can never fit on one line of sixty columns.";
+    }
+
+    String g(Mode mode) {
+        return switch (mode) {
+            case BUS -> "A long description string that can never fit on one line.";
+            default -> "short";
+        };
+    }
+
+    void h() {
+        throw new IllegalStateException(
+            "A long message %s that cannot fit on a line here.".formatted(
+                name
+            )
+        );
+    }
+}

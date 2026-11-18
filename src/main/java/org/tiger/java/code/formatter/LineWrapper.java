@@ -133,6 +133,9 @@ final class LineWrapper {
         List<Candidate> commas = new ArrayList<>();
         List<Candidate> operators = new ArrayList<>();
         int depth = depthAtStart;
+        // The '->' of a `case X -> ...` / `default -> ...` arm is not a place to break.
+        String lineText = source.substring(start, end).stripLeading();
+        boolean switchArm = lineText.startsWith("case ") || lineText.startsWith("default ");
 
         int i = start;
         while (i < end) {
@@ -163,14 +166,17 @@ final class LineWrapper {
             } else if (c == '.') {
                 boolean prevDigit = i > start && Character.isDigit(source.charAt(i - 1));
                 boolean nextDigit = i + 1 < end && Character.isDigit(source.charAt(i + 1));
-                if (!prevDigit && !nextDigit) {
+                boolean afterStringLiteral = i > start && source.charAt(i - 1) == '"';
+                if (!prevDigit && !nextDigit && !afterStringLiteral) {
                     operators.add(new Candidate(depth, i));
                 }
                 i++;
             } else {
                 int matched = matchOperator(source, i, end);
                 if (matched > 0) {
-                    operators.add(new Candidate(depth, i));
+                    if (!(switchArm && source.startsWith("->", i))) {
+                        operators.add(new Candidate(depth, i));
+                    }
                     i += matched;
                 } else {
                     i++;
