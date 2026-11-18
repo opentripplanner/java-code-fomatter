@@ -1,0 +1,5 @@
+import java.nio.file.*;
+
+String log = new String(Files.readAllBytes(new File(basedir, "build.log").toPath()), "UTF-8");
+String source = new String(Files.readAllBytes(new File(basedir, "src/main/java/A.java").toPath()), "UTF-8");
+return log.contains("skipped") && source.equals("class A {\n      int x;\n void f() {\n x = 1;\n }\n}\n");

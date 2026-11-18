@@ -241,8 +241,13 @@ class JavadocRulesTest {
 
   @Test
   void paragraphRuleLeavesSpacingAroundInlineTagsAlone() throws IOException {
-    String source = "class T {\n  /**\n   * @param direction  whether to build a {@link java.util.Map  here}   forward tree\n   */\n  void f() {\n  }\n}\n";
+    String source =
+      "class T {\n  /**\n   * @param direction  whether to build a {@link java.util.Map  here}   forward tree\n   */\n  void f() {\n  }\n}\n";
 
-    assertEquals(source, ((SourceFormatter.Formatted) SourceFormatter.format(source, new FormatterConfig(100, 2, Set.of("paragraphs")))).text());
+    assertEquals(
+      source,
+      ((SourceFormatter.Formatted) SourceFormatter.format(source,
+        new FormatterConfig(100, 2, Set.of("paragraphs")))).text()
+    );
   }
 }

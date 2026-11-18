@@ -8,7 +8,8 @@ import javax.tools.JavaFileObject;
 /**
  * Orchestrates the formatting pipeline: validate the input is syntactically valid Java, reindent by brace/scope
  * nesting, wrap lines over {@link FormatterConfig#wrapAtColumn()} columns, then re-validate the result as a safety net
- * before it's ever written or printed.
+ * before it's ever written or printed, and check that the output has exactly the same tokens as the input (ignoring
+ * whitespace and comments), so a formatter bug can never change what the program does.
  */
 public final class SourceFormatter {
 
@@ -25,6 +26,11 @@ public final class SourceFormatter {
   }
 
   private SourceFormatter() {
+  }
+
+  /** Whether the two sources are the same program: the same tokens, ignoring whitespace and comments. */
+  public static boolean sameProgram(String before, String after) {
+    return TokenStream.firstDifference(before, after) == null;
   }
 
   public static FormatResult format(String source) throws IOException {
@@ -63,6 +69,14 @@ public final class SourceFormatter {
     if (!revalidated.valid()) {
       return new InternalError(
                 "formatting produced invalid Java; this is a formatter bug, not a problem with the input");
+    }
+
+    String difference = TokenStream.firstDifference(source, wrapped.text());
+
+    if (difference != null) {
+      return new InternalError(
+        "formatting changed the program (" + difference + "); this is a formatter bug, not a problem with the input"
+      );
     }
 
     return new Formatted(wrapped.text(), wrapped.unwrappableLines());

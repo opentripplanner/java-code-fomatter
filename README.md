@@ -21,6 +21,7 @@ signatures or annotations - see [Known limitations](#known-limitations).
 java -m org.tiger.java.code.formatter <file-or-dir>...            # print formatted output to stdout
 java -m org.tiger.java.code.formatter -w <file-or-dir>...         # rewrite files in place
 java -m org.tiger.java.code.formatter -w --changed                # only what git reports as changed or untracked
+java -m org.tiger.java.code.formatter --check <file-or-dir>...    # list what would change; exit 1 if anything would
 ```
 
 A directory means every `.java` file under it - in a git repository, the tracked
@@ -30,6 +31,7 @@ that is already formatted is not rewritten.
 | Option         | Meaning                                                                  |
 | -------------- | ------------------------------------------------------------------------ |
 | `-w`, `--write`| Rewrite files in place instead of printing the result                    |
+| `--check`      | Write nothing; print `would reformat: <file>` for every file that would change and exit 1 if there are any |
 | `--changed`    | Also format the files `git` reports as modified or untracked (needs git) |
 | `--no-cache`   | Ignore and do not update the cache                                       |
 | `-v`           | Print a one-line summary (formatted / already formatted / skipped / failed) |
@@ -39,7 +41,17 @@ The formatter first validates that a file is syntactically correct Java
 diagnostics, if it isn't. If a line still exceeds the configured column limit
 after reindenting and wrapping and has no safe break point (e.g. it's a single
 long string literal or a text-block line), it's left unchanged and reported
-rather than corrupted. A file with such a line makes the exit code 1.
+rather than corrupted. Such a line is a warning and never fails a run.
+
+Exit codes: `0` when every file is formatted (or, with `--check`, none would change); `1` when a file failed (it is not
+valid Java, or could not be read or written) or, with `--check`, when a file would change; `2` for a usage error.
+
+Before any output is written, the formatter checks that it has the same tokens as the input, ignoring whitespace and
+comments, so a bug in the formatter can never change what a program does; if the check fails, the file is left alone and
+reported as an internal error.
+
+To use it in a Maven build, see [maven-plugin](maven-plugin/README.md). The same operations are available as a Java API
+in `FormatRun`.
 
 ### Configuration
 
