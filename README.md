@@ -27,13 +27,13 @@ String message =
 
 ## Why use it
 
+- **Works in IntelliJ, Maven and Jenesis.** Reformat Code in the IDE, a Maven plugin, a Jenesis build step, a command
+  line and a Java API all use the same engine and the same config. See [IntelliJ](intellij-plugin/README.md),
+  [Maven](maven-plugin/README.md), [Jenesis](docs/jenesis.md), [command line](docs/cli.md) and the [API](docs/api.md).
 - **Fast.** Files run in parallel, and a content-hash cache skips files that are already formatted. A repeat check of all
   OTP's modules, about 4,300 files, takes about a second.
-- **Made for builds.** `--check` fails the build when a file is not formatted. A Maven plugin, an IntelliJ plugin and a Java API
-  are included. See [Maven](maven-plugin/README.md), [IntelliJ](intellij-plugin/README.md), [Jenesis](docs/jenesis.md) and
-  the [API](docs/api.md).
-- **Format Javadoc and comments as well.** `<p>` tags, blank lines before `@param`, hanging indents and line fill are
-  all handled, and each rule can be switched off. See [Comments and Javadoc](docs/comments.md).
+- **Formats Javadoc, comments, Markdown and JSON as well.** Comment rules can each be switched off. JSON and Markdown
+  are opt-in. See [Comments and Javadoc](docs/comments.md) and [JSON and Markdown](docs/json-markdown.md).
 - **Safe.** The formatter can never change what your program does: it compares the tokens before and after, and
   writes nothing if they differ. See [Safety](docs/safety.md).
 - **One small config file.** Two keys cover most projects, and the file is layered per directory. See
