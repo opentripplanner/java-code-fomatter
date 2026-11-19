@@ -30,8 +30,8 @@ String message =
 - **Works in IntelliJ, Maven and Jenesis.** Reformat Code in the IDE, a Maven plugin, a Jenesis build step, a command
   line and a Java API all use the same engine and the same config. See [IntelliJ](intellij-plugin/README.md),
   [Maven](maven-plugin/README.md), [Jenesis](docs/jenesis.md), [command line](docs/cli.md) and the [API](docs/api.md).
-- **Fast.** Files run in parallel, and a content-hash cache skips files that are already formatted. A repeat check of all
-  OTP's modules, about 4,300 files, takes about a second.
+- **Fast.** Files run in parallel, and a content-hash cache skips files that are already formatted. A repeat check of
+  all OTP's modules, about 4,300 files, takes about a second.
 - **Formats Javadoc, comments, Markdown and JSON as well.** Comment rules can each be switched off. JSON and Markdown
   are opt-in. See [Comments and Javadoc](docs/comments.md) and [JSON and Markdown](docs/json-markdown.md).
 - **Safe.** The formatter can never change what your program does: it compares the tokens before and after, and
