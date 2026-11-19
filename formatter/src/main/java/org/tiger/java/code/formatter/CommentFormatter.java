@@ -16,6 +16,8 @@ import java.util.List;
  *       the block being closed.</li>
  *   <li>A line holding text-block content or its closing delimiter is never touched: a line inserted there would change
  *       the string's value.</li>
+ *   <li>A {@code }} with a trailing comment, when {@code else}, {@code catch} or {@code finally} follows on the next line
+ *       ({@code } // why}), puts the comment on its own line after the {@code }}, above the keyword, at its indent.</li>
  * </ul>
  * <p>
  * A trailing comment that starts with a tool marker ({@code NOSONAR}, {@code NOPMD}, {@code CHECKSTYLE},
@@ -92,7 +94,8 @@ final class CommentFormatter {
       String trimmedCode = code.strip();
       String replacement;
 
-      if (trimmedCode.startsWith("}") && trimmedCode.endsWith("{")) {
+      if (trimmedCode.startsWith("}") && trimmedCode.endsWith("{")
+        || trimmedCode.endsWith("}") && continuesChain(source, lineEnd)) {
         replacement = code + eol + leading + comment;
       } else {
         replacement = leading + comment + eol + code;
@@ -114,6 +117,23 @@ final class CommentFormatter {
     }
 
     return out.toString();
+  }
+
+  /** Whether the next non-blank line after {@code lineEnd} starts with {@code else}, {@code catch} or {@code finally}. */
+  private static boolean continuesChain(String source, int lineEnd) {
+    int i = lineEnd;
+
+    while (i < source.length() && Character.isWhitespace(source.charAt(i))) {
+      i++;
+    }
+
+    return source.startsWith("else", i) && !Character.isJavaIdentifierPart(charAt(source, i + 4))
+      || source.startsWith("catch", i) && !Character.isJavaIdentifierPart(charAt(source, i + 5))
+      || source.startsWith("finally", i) && !Character.isJavaIdentifierPart(charAt(source, i + 7));
+  }
+
+  private static char charAt(String source, int index) {
+    return index < source.length() ? source.charAt(index) : ' ';
   }
 
   /**

@@ -4,7 +4,8 @@ public class Nested {
     public void run() {
         if (true) {
             System.out.println("a");
-        } else {
+        }
+        else {
             System.out.println("b");
         }
 

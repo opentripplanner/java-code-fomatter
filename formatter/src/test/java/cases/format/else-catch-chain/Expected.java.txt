@@ -5,18 +5,23 @@ public class ElseCatch {
         try {
             if (cond1) {
                 doA();
-            } else if (cond2) {
+            }
+            else if (cond2) {
                 doB();
-            } else {
+            }
+            else {
                 try {
                     doC();
-                } catch (RuntimeException e) {
+                }
+                catch (RuntimeException e) {
                     doD();
-                } finally {
+                }
+                finally {
                     doE();
                 }
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             doF();
         }
     }

@@ -14,8 +14,12 @@ import java.util.TreeSet;
  * Formatting options, loadable from a {@code .jcf/config.properties} file (see {@link ConfigResolver}): the column at
  * which {@link LineWrapper}/{@link ExpressionWrapper} wrap a line, and the number of spaces per indent level used
  * throughout {@link ScopeReindenter}, {@link LineWrapper} and {@link ExpressionWrapper}.
+ * <p>
+ * {@code chainedBlocksOnNewLine} puts {@code else}, {@code else if}, {@code catch} and {@code finally} on their own line
+ * after the {@code }} of the block before. On by default; {@code chainedBlocks=attached} keeps {@code } else {}.
  */
-public record FormatterConfig(int wrapAtColumn, int indent, Set<String> commentRules, Documents documents) {
+public record FormatterConfig(int wrapAtColumn, int indent, Set<String> commentRules, Documents documents,
+  boolean chainedBlocksOnNewLine) {
 
   /**
    * The settings for the non-Java files. {@code formats} are the file types to format: {@code java}, {@code json} and
@@ -75,6 +79,11 @@ public record FormatterConfig(int wrapAtColumn, int indent, Set<String> commentR
     this(wrapAtColumn, indent, commentRules, Documents.DEFAULT);
   }
 
+  /** A config with chained blocks on their own line, the default. */
+  public FormatterConfig(int wrapAtColumn, int indent, Set<String> commentRules, Documents documents) {
+    this(wrapAtColumn, indent, commentRules, documents, true);
+  }
+
   public FormatterConfig {
     if (wrapAtColumn < 1) {
       throw new IllegalArgumentException("wrapAtColumn must be at least 1, was " + wrapAtColumn);
@@ -99,7 +108,13 @@ public record FormatterConfig(int wrapAtColumn, int indent, Set<String> commentR
   public static FormatterConfig from(Properties properties) {
     int wrapAtColumn = intProperty(properties, "wrapAtColumn", DEFAULT.wrapAtColumn());
     int indent = intProperty(properties, "indent", DEFAULT.indent());
-    return new FormatterConfig(wrapAtColumn, indent, rulesProperty(properties), documentsProperties(properties));
+    return new FormatterConfig(
+      wrapAtColumn,
+      indent,
+      rulesProperty(properties),
+      documentsProperties(properties),
+      chainedBlocksProperty(properties)
+    );
   }
 
   /**
@@ -129,6 +144,17 @@ public record FormatterConfig(int wrapAtColumn, int indent, Set<String> commentR
       intProperty(properties, "markdownWrapAtColumn", Documents.DEFAULT.markdownWrapAtColumn()),
       prose.equals("preserve")
     );
+  }
+
+  /** {@code chainedBlocks}: {@code newline} (the default) or {@code attached} ({@code } else {}). */
+  private static boolean chainedBlocksProperty(Properties properties) {
+    String value = properties.getProperty("chainedBlocks", "newline").strip();
+
+    if (!value.equals("attached") && !value.equals("newline")) {
+      throw new IllegalArgumentException("chainedBlocks must be 'attached' or 'newline', was '" + value + "'");
+    }
+
+    return value.equals("newline");
   }
 
   /** {@code commentRules}: {@code all} (the default), {@code none}, or a comma-separated list of rule names. */
