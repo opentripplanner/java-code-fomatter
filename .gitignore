@@ -11,3 +11,4 @@ out/
 otp-format
 .gradle/
 .intellijPlatform/
+intellij-plugin/build/

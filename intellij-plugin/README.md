@@ -20,7 +20,7 @@ The plugin bundles the formatter library from the local Maven repository, so ins
 ```bash
 mvn install                       # in the repository root: installs the formatter
 cd intellij-plugin
-./gradlew buildPlugin             # build/distributions/formatter-intellij-plugin-1.2.0-SNAPSHOT.zip
+./gradlew buildPlugin             # build/distributions/formatter-intellij-plugin-1.2.0.zip
 ./gradlew runIde                  # starts a sandbox IDE with the plugin to try it
 ```
 

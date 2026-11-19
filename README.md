@@ -72,7 +72,7 @@ Bind the plugin once. `format` rewrites files, `check` fails the build when a fi
 <plugin>
   <groupId>org.opentripplanner.java.code.formatter</groupId>
   <artifactId>java-formatter-maven-plugin</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
   <executions>
     <execution>
       <id>format</id>
