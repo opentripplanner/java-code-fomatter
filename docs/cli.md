@@ -1,11 +1,12 @@
 # Command line
 
 ```bash
-java -m org.opentripplanner.java.code.formatter [options] <file.java|directory>...
+java -m org.opentripplanner.java.code.formatter [options] <file|directory>...
 ```
 
 The formatter is a Java module. Put the jar on the module path (`-p formatter.jar`) if it is not already there. A
-directory means every `.java` file under it. In a git repository that is the tracked files and the untracked files that
+directory means every `.java`, `.json` and `.md` file under it (JSON and Markdown are only formatted if `formats` in the
+config lists them, see [JSON and Markdown](json-markdown.md)). In a git repository that is the tracked files and the untracked files that
 are not ignored. Files run in parallel.
 
 | Option | Meaning |

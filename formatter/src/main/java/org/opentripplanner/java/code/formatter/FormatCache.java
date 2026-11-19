@@ -53,6 +53,10 @@ final class FormatCache {
     MessageDigest digest = sha256();
     digest.update(ByteBuffer.allocate(8).putInt(config.wrapAtColumn()).putInt(config.indent()).array());
     digest.update(String.join(",", config.commentRules()).getBytes(StandardCharsets.UTF_8));
+    FormatterConfig.Documents documents = config.documents();
+    digest.update(ByteBuffer.allocate(9).putInt(documents.jsonWrapAtColumn()).putInt(documents.markdownWrapAtColumn())
+      .put((byte) (documents.preserveProse() ? 1 : 0)).array());
+    digest.update(String.join(",", documents.formats()).getBytes(StandardCharsets.UTF_8));
     digest.update(content);
     ByteBuffer hash = ByteBuffer.wrap(digest.digest());
     return new Key(hash.getLong(), hash.getLong());

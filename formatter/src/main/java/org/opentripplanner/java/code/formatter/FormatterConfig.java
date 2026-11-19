@@ -15,7 +15,36 @@ import java.util.TreeSet;
  * which {@link LineWrapper}/{@link ExpressionWrapper} wrap a line, and the number of spaces per indent level used
  * throughout {@link ScopeReindenter}, {@link LineWrapper} and {@link ExpressionWrapper}.
  */
-public record FormatterConfig(int wrapAtColumn, int indent, Set<String> commentRules) {
+public record FormatterConfig(int wrapAtColumn, int indent, Set<String> commentRules, Documents documents) {
+
+  /**
+   * The settings for the non-Java files. {@code formats} are the file types to format: {@code java}, {@code json} and
+   * {@code markdown} (default: only {@code java}, so nothing else is touched until it is asked for). JSON is indented
+   * by {@link FormatterConfig#indent()}. {@code preserveProse} keeps the line breaks inside Markdown paragraphs.
+   */
+  public record Documents(Set<String> formats, int jsonWrapAtColumn, int markdownWrapAtColumn,
+    boolean preserveProse) {
+
+    public static final Set<String> FORMATS = Set.of("java", "json", "markdown");
+    public static final Documents DEFAULT = new Documents(Set.of("java"), 80, 80, false);
+
+    public Documents {
+      for (String format : formats) {
+        if (!FORMATS.contains(format)) {
+          throw new IllegalArgumentException(
+            "unknown format '" + format + "', expected one of " + new TreeSet<>(FORMATS)
+          );
+        }
+      }
+
+      if (jsonWrapAtColumn < 1 || markdownWrapAtColumn < 1) {
+        throw new IllegalArgumentException("jsonWrapAtColumn and markdownWrapAtColumn must be at least 1");
+      }
+
+      formats = Collections.unmodifiableSet(new TreeSet<>(formats));
+    }
+  }
+
 
   /** The folder holding the formatter's per-project files; see {@link ConfigResolver}. */
   public static final String DIR_NAME = ".jcf";
@@ -39,6 +68,11 @@ public record FormatterConfig(int wrapAtColumn, int indent, Set<String> commentR
   /** A config with every comment rule on. */
   public FormatterConfig(int wrapAtColumn, int indent) {
     this(wrapAtColumn, indent, COMMENT_RULES);
+  }
+
+  /** A config with the default settings for the non-Java files. */
+  public FormatterConfig(int wrapAtColumn, int indent, Set<String> commentRules) {
+    this(wrapAtColumn, indent, commentRules, Documents.DEFAULT);
   }
 
   public FormatterConfig {
@@ -65,7 +99,36 @@ public record FormatterConfig(int wrapAtColumn, int indent, Set<String> commentR
   public static FormatterConfig from(Properties properties) {
     int wrapAtColumn = intProperty(properties, "wrapAtColumn", DEFAULT.wrapAtColumn());
     int indent = intProperty(properties, "indent", DEFAULT.indent());
-    return new FormatterConfig(wrapAtColumn, indent, rulesProperty(properties));
+    return new FormatterConfig(wrapAtColumn, indent, rulesProperty(properties), documentsProperties(properties));
+  }
+
+  /**
+   * {@code formats} ({@code all}, or a comma-separated list of {@code java}, {@code json}, {@code markdown}),
+   * {@code jsonWrapAtColumn}, {@code markdownWrapAtColumn} and {@code markdownProseWrap} ({@code always} or
+   * {@code preserve}).
+   */
+  private static Documents documentsProperties(Properties properties) {
+    String value = properties.getProperty("formats");
+    Set<String> formats = Documents.DEFAULT.formats();
+
+    if (value != null && !value.isBlank()) {
+      formats = value.strip().equals("all")
+        ? Documents.FORMATS
+        : new TreeSet<>(Arrays.stream(value.split(",")).map(String::strip).filter(f -> !f.isEmpty()).toList());
+    }
+
+    String prose = properties.getProperty("markdownProseWrap", "always").strip();
+
+    if (!prose.equals("always") && !prose.equals("preserve")) {
+      throw new IllegalArgumentException("markdownProseWrap must be 'always' or 'preserve', was '" + prose + "'");
+    }
+
+    return new Documents(
+      formats,
+      intProperty(properties, "jsonWrapAtColumn", Documents.DEFAULT.jsonWrapAtColumn()),
+      intProperty(properties, "markdownWrapAtColumn", Documents.DEFAULT.markdownWrapAtColumn()),
+      prose.equals("preserve")
+    );
   }
 
   /** {@code commentRules}: {@code all} (the default), {@code none}, or a comma-separated list of rule names. */

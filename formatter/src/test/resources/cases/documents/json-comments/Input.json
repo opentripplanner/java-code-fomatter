@@ -1,0 +1,27 @@
+// top comment
+
+// second top
+{ // after brace
+  // lead a
+  "a": 1, // trail a
+
+  // lead b1
+
+  // lead b2
+  "b": [1, 2], /* block trail */
+  /* block lead */ "c": { "x": 1 },
+  /**
+     * doc
+       * more
+   */
+  "d": [ // in array
+    1,
+    // before 2
+    2 // trail 2
+    // dangling in array
+  ],
+  "e": {}, "f": { /* empty */ },
+  "g": 3
+  // dangling end
+} // after top
+// the very end

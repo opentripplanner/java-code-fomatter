@@ -40,7 +40,7 @@ goals. Lines the formatter cannot bring under the limit (a long URL, a long stri
 | `skip` | `jcf.skip` | `false` | Skip the goal. |
 | `cache` | `jcf.cache` | `true` | Use the `.jcf/cache` of files already known to be formatted. |
 | `includeTests` | `jcf.includeTests` | `true` | Also format the test source roots. |
-| `sourceRoots` | | the project's compile and test source roots | Directories to format. |
+| `sourceRoots` | | the project's compile and test source roots and resource directories | Directories to format. JSON and Markdown files in them are formatted when `formats` in `.jcf/config.properties` lists them (see [JSON and Markdown](../docs/json-markdown.md)); add the documentation directory here to format its files. |
 | `excludes` | | none | Globs, relative to each source root, of files to leave alone, e.g. `**/generated/**`. |
 
 Source roots under the build directory (generated sources) are never formatted.

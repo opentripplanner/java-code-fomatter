@@ -16,8 +16,8 @@ import org.apache.maven.project.MavenProject;
 import org.opentripplanner.java.code.formatter.FormatRun;
 
 /**
- * What the {@code format} and {@code check} goals share: finding the project's Java sources, running the formatter over
- * them and reporting. The formatter's own {@code .jcf/config.properties} (found per file, up to the repository root)
+ * What the {@code format} and {@code check} goals share: finding the project's sources (and, where the config asks for
+ * it, its JSON and Markdown files), running the formatter over them and reporting. The formatter's own {@code .jcf/config.properties} (found per file, up to the repository root)
  * decides how files are formatted; nothing about formatting is configured here.
  */
 abstract class AbstractFormatMojo extends AbstractMojo {
@@ -40,8 +40,10 @@ abstract class AbstractFormatMojo extends AbstractMojo {
   protected boolean includeTests;
 
   /**
-   * The source roots to format. Default: the project's compile and test source roots, except any under the build
-   * directory (generated sources).
+   * The source roots to format. Default: the project's compile and test source roots and its resource directories,
+   * except any under the build directory (generated sources). JSON and Markdown files are only formatted where
+   * {@code formats} in {@code .jcf/config.properties} lists them; add a directory here (for example the one with the
+   * documentation) to format the files in it.
    */
   @Parameter
   protected List<File> sourceRoots;
@@ -57,14 +59,14 @@ abstract class AbstractFormatMojo extends AbstractMojo {
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
     if (skip) {
-      getLog().info("Java formatter skipped (jcf.skip)");
+      getLog().info("Formatter skipped (jcf.skip)");
       return;
     }
 
-    List<Path> files = javaFiles();
+    List<Path> files = sourceFiles();
 
     if (files.isEmpty()) {
-      getLog().debug("No Java source files to format in " + project.getArtifactId());
+      getLog().debug("No source files to format in " + project.getArtifactId());
       return;
     }
 
@@ -83,7 +85,7 @@ abstract class AbstractFormatMojo extends AbstractMojo {
   protected void failOnErrors(FormatRun.Report report) throws MojoFailureException {
     if (!report.failed().isEmpty()) {
       throw new MojoFailureException(
-        report.failed().size() + " Java file(s) could not be formatted, see the errors above"
+        report.failed().size() + " file(s) could not be formatted, see the errors above"
       );
     }
   }
@@ -102,16 +104,18 @@ abstract class AbstractFormatMojo extends AbstractMojo {
     return text.toString();
   }
 
-  private List<Path> javaFiles() {
+  private List<Path> sourceFiles() {
     List<Path> roots = new ArrayList<>();
 
     if (sourceRoots != null && !sourceRoots.isEmpty()) {
       sourceRoots.forEach(root -> roots.add(root.toPath()));
     } else {
       project.getCompileSourceRoots().forEach(root -> roots.add(Path.of(root)));
+      project.getResources().forEach(resource -> roots.add(Path.of(resource.getDirectory())));
 
       if (includeTests) {
         project.getTestCompileSourceRoots().forEach(root -> roots.add(Path.of(root)));
+        project.getTestResources().forEach(resource -> roots.add(Path.of(resource.getDirectory())));
       }
     }
 
@@ -131,7 +135,7 @@ abstract class AbstractFormatMojo extends AbstractMojo {
         continue;
       }
 
-      for (Path file : FormatRun.javaFilesUnder(absolute)) {
+      for (Path file : FormatRun.formattableFilesUnder(absolute)) {
         Path relative = absolute.relativize(file.toAbsolutePath().normalize());
 
         if (excluded.stream().noneMatch(matcher -> matcher.matches(relative))) {

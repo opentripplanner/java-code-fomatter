@@ -211,6 +211,7 @@ Markdown, JSON and GraphQL are not formatted. Static analysis, such as removing 
 | [Configuration](docs/configuration.md) | `.jcf/config.properties`, layering, all keys |
 | [Style guide](docs/style.md) | Every layout rule, with examples |
 | [Comments and Javadoc](docs/comments.md) | The comment rules and how to switch them |
+| [JSON and Markdown](docs/json-markdown.md) | Formatting `.json` and `.md` files, Prettier style |
 | [Safety](docs/safety.md) | Validation, the token check, what happens on failure |
 | [Maven plugin](maven-plugin/README.md) | Goals, parameters, source roots, releasing |
 | [Java API](docs/api.md) | `FormatRun` and `SourceFormatter` |
