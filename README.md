@@ -29,8 +29,9 @@ String message =
 
 - **Fast.** Files run in parallel, and a content-hash cache skips files that are already formatted. A repeat check of all
   OTP's modules, about 4,300 files, takes about a second.
-- **Made for builds.** `--check` fails the build when a file is not formatted. A Maven plugin and a Java API are
-  included. See [Maven](maven-plugin/README.md), [Jenesis](docs/jenesis.md) and the [API](docs/api.md).
+- **Made for builds.** `--check` fails the build when a file is not formatted. A Maven plugin, an IntelliJ plugin and a Java API
+  are included. See [Maven](maven-plugin/README.md), [IntelliJ](intellij-plugin/README.md), [Jenesis](docs/jenesis.md) and
+  the [API](docs/api.md).
 - **Format Javadoc and comments as well.** `<p>` tags, blank lines before `@param`, hanging indents and line fill are
   all handled, and each rule can be switched off. See [Comments and Javadoc](docs/comments.md).
 - **Safe.** The formatter can never change what your program does: it compares the tokens before and after, and
@@ -213,8 +214,9 @@ Markdown, JSON and GraphQL are not formatted. Static analysis, such as removing 
 | [JSON and Markdown](docs/json-markdown.md) | Formatting `.json` and `.md` files, Prettier style |
 | [Safety](docs/safety.md) | Validation, the token check, what happens on failure |
 | [Maven plugin](maven-plugin/README.md) | Goals, parameters, source roots, releasing |
+| [IntelliJ plugin](intellij-plugin/README.md) | Reformat Code in the IDE with the same rules |
 | [Jenesis](docs/jenesis.md) | Running the formatter in a Jenesis build |
-| [Java API](docs/api.md) | `FormatRun` and `SourceFormatter` |
+| [Java API](docs/api.md) | `FormatRun` (files and text) and `SourceFormatter` |
 | [Comparison](docs/comparison.md) | Side by side with google-java-format and Prettier |
 | [Limitations](docs/limitations.md) | What it does not do yet |
 | [Development](docs/development.md) | Build, tests and fixtures |

@@ -4,7 +4,8 @@ The project is built with [Jenesis](https://jenesis.build/). The build engine is
 source. You need JDK 25 or newer and nothing else.
 
 The repository is a Maven multi-module project: the root `pom.xml` is the parent of `formatter` (the library and command
-line, in `formatter/`) and `maven-plugin`. Jenesis reads the poms to find the modules and the JUnit dependency.
+line, in `formatter/`) and `maven-plugin`. Jenesis reads the poms to find the modules and the JUnit dependency. The `intellij-plugin` folder is
+not part of that build; it is a separate Gradle project (see below).
 
 ```bash
 java build/jenesis/Make.java              # compile, test and package
@@ -48,6 +49,12 @@ mvn verify                     # only Maven: the formatter jar, the plugin and i
 
 This builds the formatter, builds the plugin and runs the integration tests in `maven-plugin/src/it`. Maven does not
 run the formatter's unit tests; Jenesis does.
+
+## The IntelliJ plugin
+
+The plugin in `intellij-plugin/` is built with Gradle and bundles the formatter from the local Maven repository, so run
+`mvn install` in the root first. Then `./gradlew buildPlugin` or `./gradlew runIde` in that folder. See the
+[plugin guide](../intellij-plugin/README.md). It formats editor text through `FormatRun.formatText`.
 
 ## Trying it on a large code base
 
