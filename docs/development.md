@@ -37,6 +37,13 @@ real configuration. A narrow limit keeps fixtures short.
 The plugin's integration tests in `maven-plugin/src/it` are small Maven projects run against the built plugin. They run
 as part of `mvn verify`.
 
+## The IntelliJ plugin
+
+The plugin in `intellij-plugin/` is a separate Gradle project, not part of the Maven build. It bundles the formatter from
+the local Maven repository, so run `mvn install` in the root first. Then run `./gradlew buildPlugin` or
+`./gradlew runIde` in that folder. See the [plugin guide](../intellij-plugin/README.md). It formats editor text through
+`FormatRun.formatText`.
+
 ## Publishing to Maven Central
 
 Three artifacts are published as one bundle: `java-code-formatter-parent` (the parent pom), `java-code-formatter` (the
