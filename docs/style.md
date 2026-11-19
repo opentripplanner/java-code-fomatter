@@ -104,8 +104,8 @@ There are two reasons for this layout:
 1. **A comment about a block goes above the block.** This is the same for the first `if`, for `for` loops and for
    classes. With `} else {` there is no line above the `else` that belongs to it, so the comment has to go inside the
    block or in front of the `}`. On its own line, `else` takes its comment from above like any other block.
-2. **`else` is in the same column as its `if`.** They are in the same scope, so they line up. When you scan down the
-   left edge, you see `if`, `else if` and `else` as one list of branches.
+2. **The identifiers `if` and `else` are in the same column.** They are in the same scope, so they line up. When you
+   scan down the left edge, you see `if`, `else if` and `else` as one list of branches.
 
 `do { } while (x);` is not split, because a `while` on its own line would read as a loop with an empty body.
 
@@ -114,8 +114,9 @@ There are two reasons for this layout:
 `code; // note` becomes the comment on its own line above, at the same indent. Tool markers stay where they are:
 `NOSONAR`, `NOPMD`, `CHECKSTYLE`, `noinspection`, `nosemgrep`, `lgtm`, `nolint` and `$NON-NLS`. In `else { // note`
 the comment goes above the `else`, like the comment of any other block. Only with `chainedBlocks=attached`, in
-`} else { // note`, does it move inside the new block, because above that line it would belong to the block that closes. A comment after a closing brace, as in `} // note`
-with `else`, `catch` or `finally` on the next line, goes on its own line below the `}`, at the indent of that keyword.
+`} else { // note`, does it move inside the new block, because above that line it would belong to the block that
+closes. A comment after a closing brace, as in `} // note` with `else`, `catch` or `finally` on the next line, goes on
+its own line below the `}`, at the indent of that keyword.
 
 ## Comments are never dropped
 

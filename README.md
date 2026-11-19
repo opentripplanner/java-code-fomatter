@@ -8,7 +8,8 @@ Scope matters, code that has the same scope should have the same indention - eit
 listed in one column. Important information goes _first_ on the line so you do not have to scan to the end to see it! 
 For example operators go first on a wrapped line, so the left edge reads as a list of what is being combined. A line
 that is too long is broken where the expression itself divides: at the operator that binds the weakest (`+` before `*`),
-not at the last space before the column limit. Each part then gets its own line, indented one level.
+not at the last space before the column limit. Each part then gets its own line, indented one level. For the same reason `else`, `catch` and `finally` start their own
+line, in the same column as the `if` or `try` they belong to.
 
 ```java
 // before: one 160-character line
@@ -155,6 +156,41 @@ case
   PENDING_PAYMENT,
   PENDING_SHIPMENT,
   PENDING_CONFIRMATION_FROM_CUSTOMER -> "Order is still waiting for something to happen";
+```
+
+**An `if` / `else` chain.** Prettier and google-java-format keep `} else {` on the line of the brace. This formatter
+puts `else` on its own line, in the same column as its `if`, so the identifiers (`if` and `else`) line up when you scan
+down. That also gives the comment of the `else` a place above the block, as for `if`, `for` and classes. Set
+`chainedBlocks=attached` to turn this off.
+
+```java
+// this formatter
+// A comment to the if block
+if (score >= 90) {
+  return "A";
+}
+// A comment to the else block
+else {
+  return "C";
+}
+
+// google-java-format
+// A comment to the if block
+if (score >= 90) {
+  return "A";
+} else {
+  // A comment to the else block
+  return "C";
+}
+
+// Prettier
+// A comment to the if block
+if (score >= 90) {
+  return "A";
+} else {
+  // A comment to the else block
+  return "C";
+}
 ```
 
 **Trailing comments.** Prettier and google-java-format leave `int count = 0; // retries` where it is. This formatter

@@ -24,6 +24,17 @@ indent with a 4-space continuation, so its wrapped lines are indented more.
     };
   }
 
+  String classify(int score) {
+    if (score >= 90) { // top tier
+      return "A";
+    } else if (score >= 80) {
+      // second tier
+      return "B";
+    } else { // everything else
+      return "C";
+    }
+  }
+
   List<String> names(List<Customer> customers) {
     return customers.stream().filter(c -> c.isActive() && c.hasVerifiedEmail()).map(c -> c.firstName() + " " + c.lastName()).sorted().toList();
   }
@@ -73,6 +84,21 @@ indent with a 4-space continuation, so its wrapped lines are indented more.
       case SHIPPED -> "shipped";
       default -> message;
     };
+  }
+
+  String classify(int score) {
+    // top tier
+    if (score >= 90) {
+      return "A";
+    }
+    else if (score >= 80) {
+      // second tier
+      return "B";
+    }
+    // everything else
+    else {
+      return "C";
+    }
   }
 
   List<String> names(List<Customer> customers) {
@@ -129,6 +155,17 @@ indent with a 4-space continuation, so its wrapped lines are indented more.
       case SHIPPED -> "shipped";
       default -> message;
     };
+  }
+
+  String classify(int score) {
+    if (score >= 90) { // top tier
+      return "A";
+    } else if (score >= 80) {
+      // second tier
+      return "B";
+    } else { // everything else
+      return "C";
+    }
   }
 
   List<String> names(List<Customer> customers) {
@@ -192,6 +229,19 @@ indent with a 4-space continuation, so its wrapped lines are indented more.
     };
   }
 
+  String classify(int score) {
+    if (score >= 90) {
+      // top tier
+      return "A";
+    } else if (score >= 80) {
+      // second tier
+      return "B";
+    } else {
+      // everything else
+      return "C";
+    }
+  }
+
   List<String> names(List<Customer> customers) {
     return customers
       .stream()
@@ -223,6 +273,8 @@ indent with a 4-space continuation, so its wrapped lines are indented more.
 | Long `case` labels | Kept as written; `->` on its own line | Kept; `->` ends the label line | One label per line |
 | First call of a chain | Split from the receiver | Stays with the receiver | Split from the receiver |
 | Trailing `// comment` | Moved above the statement | Stays | Stays |
+| Comment on `if (x) { // note` or `} else { // note` | Above the `if` or the `else`, outside the block | Stays on the line | Moved to the first line inside the block |
+| `else`, `catch`, `finally` | On their own line after the `}` (configurable) | On the line of the `}` | On the line of the `}` |
 | Blank lines around blocks | Always one | Not added | Not added |
 | Javadoc | Reformatted; `<p>` on its own line | Reformatted; `<p>Text` | Not touched |
 | Spacing inside a line (`a=1`) | Normalized, except `<` and `>` and a few other unclear places | Normalized | Normalized |
