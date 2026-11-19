@@ -32,11 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
  * test-resources classpath: growing coverage is adding a fixture directory, not writing code. Each case also gets a
  * free idempotency check - formatting already-formatted code must be a no-op.
  * <p>
- * Fixtures use a {@code .java.txt} extension, not {@code .java}: Jenesis compiles every {@code .java} file under
- * {@code src/test} as real source, so a plain {@code .java} fixture would be compiled as test code instead of copied as
- * a resource.
+ * Fixtures use a {@code .java.txt} extension, not {@code .java}, so that nothing mistakes them for source code: an
+ * IDE would report their errors, and a build that formats test sources would rewrite them.
  * <p>
- * All cases share {@code formatter/src/test/java/cases/.jcf/config.properties} ({@code wrapAtColumn=60}), loaded through the same
+ * All cases share {@code src/test/resources/cases/.jcf/config.properties} ({@code wrapAtColumn=60}), loaded through the same
  * {@link FormatterConfig} a real {@code .jcf/config.properties} would be - a narrower column budget than the 120-column
  * default keeps fixtures short and readable.
  */
@@ -71,8 +70,8 @@ class FormatterGoldenFileTest {
     URL root = FormatterGoldenFileTest.class.getResource("/cases/format");
     Objects.requireNonNull(root, "format-cases resource directory not found on the test classpath");
 
-    // Test resources may be an exploded directory or packaged into a jar (as Jenesis does when
-    // running the suite), so the root's path may need a filesystem opened for it first.
+    // Test resources may be an exploded directory or packaged into a jar, so the root's path may need a
+    // filesystem opened for it first.
     try (MaybeOwnedFileSystem fs = MaybeOwnedFileSystem.forResource(root.toURI())) {
       Path casesDir = fs.path();
 

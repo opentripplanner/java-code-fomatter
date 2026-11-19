@@ -1,13 +1,11 @@
 # Development
 
-The project is built with [Jenesis](https://jenesis.build/). The build engine is in `build/jenesis/` as plain Java
-source. You need JDK 25 or newer and nothing else.
+The project is built with Maven 3.9 or newer on JDK 25 or newer. The root `pom.xml` builds two modules: `formatter` (the
+engine and the command line) and `maven-plugin`.
 
 ```bash
-java build/jenesis/Make.java              # compile, test and package
-java build/jenesis/Make.java stage        # prepare a release tree
-java build/jenesis/Make.java dependencies # show resolved dependencies
-java build/jenesis/Make.java pin          # resolve and record dependency checksums
+mvn verify              # compile, test and package both modules, and run the plugin's integration tests
+mvn -pl formatter test  # only the formatter's unit tests
 ```
 
 ## Layers of the formatter
@@ -26,52 +24,48 @@ java build/jenesis/Make.java pin          # resolve and record dependency checks
 
 ## Tests
 
-Tests are in `formatter/src/test/java/`, wired as a Jenesis `@jenesis.test` module on JUnit 5. `FormatterGoldenFileTest` is one
-data-driven test over every `formatter/src/test/java/cases/**/<name>/{Input.java.txt,Expected.java.txt}` pair. To add coverage,
-add a fixture folder, not code. Every case also gets an idempotency check: formatting `Expected.java.txt` again must
-change nothing. Fixtures end in `.java.txt` because Jenesis compiles every `.java` file under `formatter/src/test/java`.
+Tests are in `formatter/src/test/java/` and use JUnit. `FormatterGoldenFileTest` is one data-driven test over every
+`formatter/src/test/resources/cases/**/<name>/{Input.java.txt,Expected.java.txt}` pair. To add coverage, add a fixture
+folder, not code. Every case also gets an idempotency check: formatting `Expected.java.txt` again must change nothing.
+Fixtures end in `.java.txt` so that nothing mistakes them for source code.
 
-The cases share `formatter/src/test/java/cases/.jcf/config.properties` (`wrapAtColumn=60`), in the same format as a real
-configuration. A narrow limit keeps fixtures short.
+The cases share `formatter/src/test/resources/cases/.jcf/config.properties` (`wrapAtColumn=60`), in the same format as a
+real configuration. A narrow limit keeps fixtures short.
 
 ## The Maven plugin
 
-The plugin is built separately with Maven, because Jenesis does not produce plugin descriptors:
-
-```bash
-cd maven-plugin
-./build.sh verify
-```
-
-This builds the formatter, installs it into the local Maven repository, builds the plugin and runs the integration
-tests in `maven-plugin/src/it`.
+The plugin's integration tests in `maven-plugin/src/it` are small Maven projects run against the built plugin. They run
+as part of `mvn verify`.
 
 ## Publishing to Maven Central
 
-Two artifacts are published: `java-code-formatter` (built by `formatter/pom.xml` from the same sources as Jenesis) and
-`java-formatter-maven-plugin`. The `release` profile of both poms adds the source and javadoc jars, signs everything with GPG
-and uploads a bundle with the Central Publisher plugin.
+Three artifacts are published as one bundle: `java-code-formatter-parent` (the parent pom), `java-code-formatter` (the
+engine and command line) and `java-formatter-maven-plugin`. The root `pom.xml` lists the two modules and holds the shared metadata and the `release`
+profile. The profile adds the source and javadoc jars, signs everything with GPG and uploads one bundle with the Central
+Publisher plugin.
 
 You need these once:
 
-1. A [Sonatype Central](https://central.sonatype.com) account with a verified namespace for the `groupId`
-   (`org.opentripplanner.java.code.formatter`).
-2. A user token from Central, stored in `~/.m2/settings.xml` under the server id `central`.
-3. A GPG key, with the public key on a key server such as `keyserver.ubuntu.com`.
+1. A [Sonatype Central](https://central.sonatype.com) account that is a member of the verified `org.opentripplanner`
+   namespace.
+2. A user token from Central, stored in `~/.m2/settings.xml` under the server id `central`. Use `${env.NAME}` values
+   and 1Password (`op run`) to keep the token out of the file.
+3. A GPG key, with the public key on `keyserver.ubuntu.com`.
 
 To release:
 
 ```bash
-# 1. Set the version in both poms, maven-plugin/build.sh and the READMEs, then tag it.
-# 2. Check everything, without signing or uploading:
-maven-plugin/build.sh verify
-mvn -f formatter/pom.xml -Prelease -Dgpg.skip verify
-mvn -f maven-plugin/pom.xml -Prelease -Dgpg.skip verify
+# 1. Set the version in all three poms and the READMEs, and set <tag> in the two module poms. Commit and tag it.
+# 2. Use JDK 25 and let gpg ask for the passphrase:
+export JAVA_HOME=$(/usr/libexec/java_home -v 25) GPG_TTY=$(tty)
 
-# 3. Publish. Do the formatter first: the plugin depends on it.
-mvn -f formatter/pom.xml -Prelease deploy
-mvn -f maven-plugin/pom.xml -Prelease deploy
+# 3. Check everything, without signing or uploading:
+mvn verify
+mvn -Prelease -Dgpg.skip verify
+
+# 4. Publish:
+mvn -Prelease deploy
 ```
 
-Each deploy uploads a bundle that you then check and publish in the Central portal. A published version cannot be
+The deploy uploads one bundle that you then check and publish in the Central portal. A published version cannot be
 removed or changed.

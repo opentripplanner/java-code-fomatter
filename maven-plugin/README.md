@@ -51,11 +51,10 @@ command line (`mvn jcf:format`) it does not; list them in `sourceRoots` if you n
 
 ## Building and testing
 
-`./build.sh verify` builds the formatter, installs it into the local Maven repository, then builds the plugin and runs
-the integration tests in `src/it` (each one is a small Maven project run against the plugin).
+`mvn verify` from the repository root builds the formatter and the plugin and runs the integration tests in
+`maven-plugin/src/it` (each one is a small Maven project run against the plugin).
 
 ## Releasing
 
-The plugin depends on the formatter library, so both have to be published. The coordinates and package are
-placeholders; rename them together. Maven Central also requires the usual metadata in each pom (`url`, `licenses`,
-`developers`, `scm`), source and Javadoc jars, and signed artifacts.
+The plugin depends on the formatter library, and both are published together with the parent pom as one bundle. See
+[Publishing to Maven Central](../docs/development.md#publishing-to-maven-central).

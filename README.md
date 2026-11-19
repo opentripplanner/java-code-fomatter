@@ -30,7 +30,7 @@ String message =
 - **Fast.** Files run in parallel, and a content-hash cache skips files that are already formatted. A repeat check of all
   OTP's modules, about 4,300 files, takes about a second.
 - **Made for builds.** `--check` fails the build when a file is not formatted. A Maven plugin and a Java API are
-  included. See [Maven](maven-plugin/README.md), [Jenesis](docs/jenesis.md) and the [API](docs/api.md).
+  included. See [Maven](maven-plugin/README.md) and the [API](docs/api.md).
 - **Format Javadoc and comments as well.** `<p>` tags, blank lines before `@param`, hanging indents and line fill are
   all handled, and each rule can be switched off. See [Comments and Javadoc](docs/comments.md).
 - **Safe.** The formatter can never change what your program does: it compares the tokens before and after, and
@@ -87,10 +87,10 @@ On a CI server use the `check` goal instead. Formatting rules come from `.jcf/co
 your editor, the command line and Maven always agree. The plugin needs Maven to run on JDK 25 or newer. All
 parameters are in the [Maven plugin guide](maven-plugin/README.md).
 
-## Use it with Jenesis
+## Check from a test
 
-This project is built with [Jenesis](https://jenesis.build/), and the formatter is a plain Java module. You can call it
-from a test, so `java build/jenesis/Make.java` fails when a source file is not formatted:
+The formatter is a plain Java module, so any build can call it from a test. This test fails when a source file is not
+formatted:
 
 ```java
 @Test
@@ -101,7 +101,8 @@ void sourcesAreFormatted() {
 }
 ```
 
-See [Jenesis](docs/jenesis.md) for the full setup.
+The path `src` is relative to the working directory of the test run. With Maven, the [plugin](maven-plugin/README.md)
+does the same without any test code.
 
 ## How it differs from google-java-format and Prettier
 
@@ -212,7 +213,6 @@ Markdown, JSON and GraphQL are not formatted. Static analysis, such as removing 
 | [Comments and Javadoc](docs/comments.md) | The comment rules and how to switch them |
 | [Safety](docs/safety.md) | Validation, the token check, what happens on failure |
 | [Maven plugin](maven-plugin/README.md) | Goals, parameters, source roots, releasing |
-| [Jenesis](docs/jenesis.md) | Running the formatter in a Jenesis build |
 | [Java API](docs/api.md) | `FormatRun` and `SourceFormatter` |
 | [Comparison](docs/comparison.md) | Side by side with google-java-format and Prettier |
 | [Limitations](docs/limitations.md) | What it does not do yet |
