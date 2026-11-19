@@ -10,8 +10,9 @@ class A {
         if (x > 0) {
             // do it
             run();
-        } else {
-            // negative
+        }
+        // negative
+        else {
             stop();
             // done
         }

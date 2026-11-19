@@ -114,7 +114,7 @@ final class TokenStream {
     return "\"\"\"\n" + literal.substring(contentStart, literal.length() - 3).stripIndent() + "\"\"\"";
   }
 
-  private static int numberEnd(String source, int start) {
+  static int numberEnd(String source, int start) {
     int n = source.length();
     boolean hex = source.startsWith("0x", start) || source.startsWith("0X", start);
     int end = start + 1;

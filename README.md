@@ -8,7 +8,8 @@ Scope matters, code that has the same scope should have the same indention - eit
 listed in one column. Important information goes _first_ on the line so you do not have to scan to the end to see it! 
 For example operators go first on a wrapped line, so the left edge reads as a list of what is being combined. A line
 that is too long is broken where the expression itself divides: at the operator that binds the weakest (`+` before `*`),
-not at the last space before the column limit. Each part then gets its own line, indented one level.
+not at the last space before the column limit. Each part then gets its own line, indented one level. For the same reason `else`, `catch` and `finally` start their own
+line, in the same column as the `if` or `try` they belong to.
 
 ```java
 // before: one 160-character line
@@ -30,8 +31,8 @@ String message =
 - **Works in IntelliJ and Maven.** Reformat Code in the IDE, a Maven plugin, a command line and a Java API all use the
   same engine and the same config. See [IntelliJ](intellij-plugin/README.md), [Maven](maven-plugin/README.md),
   [command line](docs/cli.md) and the [API](docs/api.md).
-- **Fast.** Files run in parallel, and a content-hash cache skips files that are already formatted. A repeat check of all
-  OTP's modules, about 4,300 files, takes about a second.
+- **Fast.** Files run in parallel, and a content-hash cache skips files that are already formatted. A repeat check of
+  all OTP's modules, about 4,300 files, takes about a second.
 - **Formats Javadoc, comments, Markdown and JSON as well.** Comment rules can each be switched off. JSON and Markdown
   are opt-in. See [Comments and Javadoc](docs/comments.md) and [JSON and Markdown](docs/json-markdown.md).
 - **Safe.** The formatter can never change what your program does: it compares the tokens before and after, and
@@ -158,6 +159,41 @@ case
   PENDING_CONFIRMATION_FROM_CUSTOMER -> "Order is still waiting for something to happen";
 ```
 
+**An `if` / `else` chain.** Prettier and google-java-format keep `} else {` on the line of the brace. This formatter
+puts `else` on its own line, in the same column as its `if`, so the identifiers (`if` and `else`) line up when you scan
+down. That also gives the comment of the `else` a place above the block, as for `if`, `for` and classes. Set
+`chainedBlocks=attached` to turn this off.
+
+```java
+// this formatter
+// A comment to the if block
+if (score >= 90) {
+  return "A";
+}
+// A comment to the else block
+else {
+  return "C";
+}
+
+// google-java-format
+// A comment to the if block
+if (score >= 90) {
+  return "A";
+} else {
+  // A comment to the else block
+  return "C";
+}
+
+// Prettier
+// A comment to the if block
+if (score >= 90) {
+  return "A";
+} else {
+  // A comment to the else block
+  return "C";
+}
+```
+
 **Trailing comments.** Prettier and google-java-format leave `int count = 0; // retries` where it is. This formatter
 moves the comment to its own line above (tool markers such as `NOSONAR` stay), so that a long line never pushes the
 comment off the screen.
@@ -199,9 +235,10 @@ honest list of what this formatter does *not* do yet.
 
 ## Status
 
-The formatter replaces Prettier for the Java layout of a project that is already formatted. It does **not** yet
-normalize the spacing inside a line (`int   a=1,b=2;` stays as written), so on messy input run a spacing tool first.
-Markdown, JSON and GraphQL are not formatted. Static analysis, such as removing unused imports, is left to other tools
+The formatter replaces Prettier for the Java layout of a project. It also normalizes the spacing inside a line
+(`int   a=1,b=2;` becomes `int a = 1, b = 2;`), except where the meaning is unclear without a parser, such as
+`a<b`. See [Limitations](docs/limitations.md). JSON and Markdown are formatted when you opt in; GraphQL is not.
+Static analysis, such as removing unused imports, is left to other tools
 (Spotless and Checkstyle). See [Limitations](docs/limitations.md).
 
 ## Documentation

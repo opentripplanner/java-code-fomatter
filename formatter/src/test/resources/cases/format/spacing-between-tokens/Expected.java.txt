@@ -1,0 +1,41 @@
+import static java.lang.Math.*;
+
+public class C<T extends Number & Comparable<T>> {
+    private static final int[] TABLE = {1, 2, 3};
+    int a = 1, b = 2;
+
+    @SuppressWarnings({"a", "b"})
+    String f(Map<String, List<String>> m,
+        String... r) throws IOException, Exception {
+        if (a>b) { return null; }
+        else { a++; }
+
+        for (int i = 0; i<10; i++) { b += i * 2 - 1; }
+        for (String s : rest) { System.out.println(s); }
+        int x = (int)-a, y = -b, z = a - b, w = a - -b;
+        String t = a>b ? "x" : "y";
+        Runnable r = () -> { };
+        Function<Integer, Integer> g = v -> v + 1;
+        foo(a, b);
+        this.a = 3;
+        list.stream().map(Foo::bar).toList();
+        switch (a) { case 1:  break; default : break; }
+
+        try {
+            run();
+        }
+        catch (IOException | RuntimeException e) {
+            throw e;
+        }
+        finally {
+            done();
+        }
+
+        boolean q = !a && ~b != 0;
+        // keep   this   comment   as   is
+        return a + b * c / d % e + "s" + 'c';
+    }
+
+    non-sealed class D {}
+    sealed interface S permits A, B {}
+}

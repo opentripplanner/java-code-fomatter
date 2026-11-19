@@ -13,14 +13,16 @@ mvn -pl formatter test  # only the formatter's unit tests
 `SourceFormatter` runs these steps in order, and finishes with the checks in [Safety](safety.md):
 
 1. Validate the input.
-2. `CommentFormatter` moves trailing comments above their line.
-3. `BlankLineFormatter` adds blank lines around blocks.
-4. `ScopeReindenter` indents by brace nesting.
-5. `ExpressionWrapper` wraps declarations, assignments, `return`, `throw`, headers and switch arms using the javac tree.
-6. `ScopeReindenter` runs again.
-7. `JavadocFormatter` and `LineCommentWrapper` format comments, as chosen by `commentRules`.
-8. `LineWrapper` wraps whatever is still too long, greedily.
-9. Parse the result again and compare tokens (`TokenStream`).
+2. `SpacingNormalizer` sets the spaces between tokens on a line.
+3. `ChainedBlockLayout` puts `else`, `catch` and `finally` on their own line after the `}`, unless `chainedBlocks=attached`.
+4. `CommentFormatter` moves trailing comments above their line.
+5. `BlankLineFormatter` adds blank lines around blocks.
+6. `ScopeReindenter` indents by brace nesting.
+7. `ExpressionWrapper` wraps declarations, assignments, `return`, `throw`, headers and switch arms using the javac tree.
+8. `ScopeReindenter` runs again.
+9. `JavadocFormatter` and `LineCommentWrapper` format comments, as chosen by `commentRules`.
+10. `LineWrapper` wraps whatever is still too long, greedily.
+11. Parse the result again and compare tokens (`TokenStream`).
 
 ## Tests
 

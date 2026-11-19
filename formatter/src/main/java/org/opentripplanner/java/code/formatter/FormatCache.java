@@ -57,6 +57,7 @@ final class FormatCache {
     digest.update(ByteBuffer.allocate(9).putInt(documents.jsonWrapAtColumn()).putInt(documents.markdownWrapAtColumn())
       .put((byte) (documents.preserveProse() ? 1 : 0)).array());
     digest.update(String.join(",", documents.formats()).getBytes(StandardCharsets.UTF_8));
+    digest.update((byte) (config.chainedBlocksOnNewLine() ? 1 : 0));
     digest.update(content);
     ByteBuffer hash = ByteBuffer.wrap(digest.digest());
     return new Key(hash.getLong(), hash.getLong());

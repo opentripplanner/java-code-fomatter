@@ -15,6 +15,7 @@ source directory (only the cache is created, at the repository root).
 | `wrapAtColumn` | `120` | The column at which a line is wrapped. |
 | `indent` | `4` | Spaces per indent level. It is used for scopes, wrapped lines and every wrapping step. |
 | `commentRules` | `all` | Which comment rules are on: `all`, `none`, or a comma-separated list. See [Comments](comments.md). |
+| `chainedBlocks` | `newline` | `newline` puts `else`, `else if`, `catch` and `finally` on their own line after the `}`. `attached` keeps `} else {`. See [Style guide](style.md). |
 | `formats` | `java` | The file types to format: `java`, `json`, `markdown` or `all`. See [JSON and Markdown](json-markdown.md). |
 | `jsonWrapAtColumn` | `80` | The width for JSON files. |
 | `markdownWrapAtColumn` | `80` | The width for Markdown files. |

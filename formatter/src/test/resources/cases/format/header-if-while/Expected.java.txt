@@ -5,7 +5,8 @@ class A {
             || thirdConditionIsLong
         ) {
             run();
-        } else if (
+        }
+        else if (
             anotherConditionIsLong
             && yetAnotherConditionIsLong
             && more
