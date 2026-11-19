@@ -48,7 +48,17 @@ abstract class AbstractFormatMojo extends AbstractMojo {
   @Parameter
   protected List<File> sourceRoots;
 
-  /** Glob patterns, relative to each source root, of files to leave alone, e.g. {@code **}{@code /generated/**}. */
+  /**
+   * Additional files to format, as glob patterns relative to the project base directory, for example
+   * {@code *.md} and {@code docs/**.md}. Use this in the root pom for documentation and other files outside the source
+   * roots; files that belong to a submodule are left to that module. Only file types enabled by {@code formats} in
+   * {@code .jcf/config.properties} are formatted. Note that {@code **} must be used without a following slash to match
+   * files directly in the directory too ({@code docs/**.md}, not {@code docs/**}{@code /*.md}).
+   */
+  @Parameter
+  protected List<String> includes;
+
+  /** Glob patterns, relative to each source root (or the base directory for {@code includes}), of files to leave alone, e.g. {@code **}{@code /generated/**}. */
   @Parameter
   protected List<String> excludes;
 
@@ -139,6 +149,27 @@ abstract class AbstractFormatMojo extends AbstractMojo {
         Path relative = absolute.relativize(file.toAbsolutePath().normalize());
 
         if (excluded.stream().noneMatch(matcher -> matcher.matches(relative))) {
+          files.add(file);
+        }
+      }
+    }
+
+    if (includes != null && !includes.isEmpty()) {
+      Path base = project.getBasedir().toPath().toAbsolutePath().normalize();
+      List<PathMatcher> included = new ArrayList<>();
+      includes.forEach(glob -> included.add(FileSystems.getDefault().getPathMatcher("glob:" + glob)));
+      List<Path> moduleDirectories = project.getModules().stream().map(module -> base.resolve(module).normalize()).toList();
+
+      for (Path file : FormatRun.formattableFilesUnder(base)) {
+        Path absolute = file.toAbsolutePath().normalize();
+        Path relative = base.relativize(absolute);
+
+        if (
+          !absolute.startsWith(buildDirectory)
+            && moduleDirectories.stream().noneMatch(absolute::startsWith)
+            && included.stream().anyMatch(matcher -> matcher.matches(relative))
+            && excluded.stream().noneMatch(matcher -> matcher.matches(relative))
+        ) {
           files.add(file);
         }
       }

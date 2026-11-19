@@ -1,0 +1,10 @@
+import java.nio.file.*;
+
+String read(String path) throws Exception {
+  return new String(Files.readAllBytes(new File(basedir, path).toPath()), "UTF-8");
+}
+
+// Only the file matched by the include is formatted; other files and the submodule's files are left alone.
+return !read("docs/a.json").equals("{\"a\":1}\n")
+  && read("other.json").equals("{\"a\":1}\n")
+  && read("sub/docs/b.json").equals("{\"a\":1}\n");
