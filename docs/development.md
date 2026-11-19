@@ -55,7 +55,8 @@ You need these once:
 To release:
 
 ```bash
-# 1. Set the version in all three poms and the READMEs, and set <tag> in the two module poms. Commit and tag it.
+# 1. Set the version in the three poms (mvn versions:set -DnewVersion=1.1.0 -DgenerateBackupPoms=false) and in the
+#    README snippets. Commit and tag it.
 # 2. Use JDK 25 and let gpg ask for the passphrase:
 export JAVA_HOME=$(/usr/libexec/java_home -v 25) GPG_TTY=$(tty)
 
