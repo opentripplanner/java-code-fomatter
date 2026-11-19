@@ -1,0 +1,18 @@
+<idea-plugin>
+  <id>org.tiger.java.code.formatter.ide</id>
+  <name>Java Code Formatter</name>
+  <vendor>Thomas Gran</vendor>
+
+  <description><![CDATA[
+    Formats Java files, and JSON and Markdown files, with the Java code formatter library when you choose
+    <b>Reformat Code</b> or save with <b>Reformat code</b> turned on. The rules come from the
+    <code>.jcf/config.properties</code> files in your project, so the editor, the command line and Maven agree.
+  ]]></description>
+
+  <depends>com.intellij.modules.platform</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <formattingService implementation="org.tiger.java.code.formatter.intellij.JcfFormattingService" order="first"/>
+    <notificationGroup id="Java Code Formatter" displayType="BALLOON"/>
+  </extensions>
+</idea-plugin>

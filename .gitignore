@@ -11,3 +11,5 @@ out/
 
 
 otp-format
+.gradle/
+.intellijPlatform/

@@ -72,6 +72,99 @@ public final class FormatRun {
   private FormatRun() {
   }
 
+  /**
+   * The outcome of formatting text that is not read from, or written to, disk (an editor buffer). {@code text} is the
+   * formatted text for {@link Status#CHANGED} and {@link Status#UNCHANGED}, and {@code null} for {@link Status#FAILED}.
+   */
+  public record TextResult(Status status, String text, List<String> errors, List<String> warnings) {
+  }
+
+  /**
+   * Whether the formatter formats {@code file}: it is a Java file, or a JSON or Markdown file of a type that
+   * {@code formats} in the config for that file lists. The file does not have to exist, but its directory decides the
+   * config.
+   */
+  public static boolean handles(Path file) {
+    DocumentFormatter.Kind kind = DocumentFormatter.kindOf(file);
+
+    if (kind == null) {
+      return file.getFileName().toString().endsWith(".java");
+    }
+
+    try {
+      return new ConfigResolver().configFor(file).documents().formats().contains(kind.config());
+    } catch (IOException | IllegalArgumentException e) {
+      return false;
+    }
+  }
+
+  /**
+   * Formats {@code source} as the contents of {@code file}, which picks the file type and the config. Nothing is read
+   * from or written to the file, and no cache is used. The caller should check {@link #handles(Path)} first; a JSON or
+   * Markdown file that is not enabled in the config comes back {@link Status#UNCHANGED}.
+   */
+  public static TextResult formatText(Path file, String source) {
+    FormatterConfig config;
+
+    try {
+      config = new ConfigResolver().configFor(file);
+    } catch (IOException | IllegalArgumentException e) {
+      return textFailure(file + ": " + e.getMessage());
+    }
+
+    DocumentFormatter.Kind kind = DocumentFormatter.kindOf(file);
+
+    if (kind != null) {
+      if (!config.documents().formats().contains(kind.config())) {
+        return new TextResult(Status.UNCHANGED, source, List.of(), List.of());
+      }
+
+      return switch (DocumentFormatter.format(kind, source, config)) {
+        case DocumentFormatter.Skipped(var reason) ->
+          new TextResult(Status.UNCHANGED, source, List.of(), List.of(file + ": " + reason));
+        case DocumentFormatter.Formatted(var text) -> textResult(source, text, List.of());
+      };
+    }
+
+    SourceFormatter.FormatResult result;
+
+    try {
+      result = SourceFormatter.format(source, config);
+    } catch (IOException e) {
+      return textFailure(file + ": " + e.getMessage());
+    }
+
+    return switch (result) {
+      case SourceFormatter.ValidationFailed(var diagnostics) -> {
+        List<String> errors = new ArrayList<>();
+
+        for (Diagnostic<? extends JavaFileObject> diagnostic : diagnostics) {
+          errors.add(file + ":" + diagnostic.getLineNumber() + ": " + diagnostic.getMessage(null));
+        }
+
+        yield new TextResult(Status.FAILED, null, errors, List.of());
+      }
+      case SourceFormatter.InternalError(var message) -> textFailure(file + ": " + message);
+      case SourceFormatter.Formatted(var text, var unwrappableLines) -> {
+        List<String> warnings = new ArrayList<>();
+
+        for (int line : unwrappableLines) {
+          warnings.add(unwrappableMessage(file, line, config));
+        }
+
+        yield textResult(source, text, warnings);
+      }
+    };
+  }
+
+  private static TextResult textResult(String source, String text, List<String> warnings) {
+    return new TextResult(text.equals(source) ? Status.UNCHANGED : Status.CHANGED, text, List.of(), warnings);
+  }
+
+  private static TextResult textFailure(String message) {
+    return new TextResult(Status.FAILED, null, List.of(message), List.of());
+  }
+
   public static Report run(List<Path> files, Mode mode, boolean useCache) {
     ConfigResolver resolver = new ConfigResolver();
     // One cache per outermost repository root (or, outside a repository, per file's directory).
