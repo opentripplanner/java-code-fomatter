@@ -21,6 +21,9 @@ is reported as an internal error:
 formatting changed the program (...); this is a formatter bug, not a problem with the input
 ```
 
+With `removeUnusedImports=true`, the input of this comparison is the source with its unused imports removed, so the
+only change to the tokens that is allowed is the removal of whole import statements.
+
 Such a message is a bug in the formatter. Please report it with the input file.
 
 The check runs on every file, every time. It was also run on all 4,299 Java files of OpenTripPlanner with no

@@ -13,16 +13,17 @@ mvn -pl formatter test  # only the formatter's unit tests
 `SourceFormatter` runs these steps in order, and finishes with the checks in [Safety](safety.md):
 
 1. Validate the input.
-2. `SpacingNormalizer` sets the spaces between tokens on a line.
-3. `ChainedBlockLayout` puts `else`, `catch` and `finally` on their own line after the `}`, unless `chainedBlocks=attached`.
-4. `CommentFormatter` moves trailing comments above their line.
-5. `BlankLineFormatter` adds blank lines around blocks.
-6. `ScopeReindenter` indents by brace nesting.
-7. `ExpressionWrapper` wraps declarations, assignments, `return`, `throw`, headers and switch arms using the javac tree.
-8. `ScopeReindenter` runs again.
-9. `JavadocFormatter` and `LineCommentWrapper` format comments, as chosen by `commentRules`.
-10. `LineWrapper` wraps whatever is still too long, greedily.
-11. Parse the result again and compare tokens (`TokenStream`).
+2. `ImportRemover` removes unused imports, only with `removeUnusedImports=true`.
+3. `SpacingNormalizer` sets the spaces between tokens on a line.
+4. `ChainedBlockLayout` puts `else`, `catch` and `finally` on their own line after the `}`, unless `chainedBlocks=attached`.
+5. `CommentFormatter` moves trailing comments above their line.
+6. `BlankLineFormatter` adds blank lines around blocks.
+7. `ScopeReindenter` indents by brace nesting.
+8. `ExpressionWrapper` wraps declarations, assignments, `return`, `throw`, headers and switch arms using the javac tree.
+9. `ScopeReindenter` runs again.
+10. `JavadocFormatter` and `LineCommentWrapper` format comments, as chosen by `commentRules`.
+11. `LineWrapper` wraps whatever is still too long, greedily.
+12. Parse the result again and compare tokens (`TokenStream`).
 
 ## Tests
 

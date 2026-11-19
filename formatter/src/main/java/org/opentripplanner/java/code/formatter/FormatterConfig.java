@@ -17,9 +17,12 @@ import java.util.TreeSet;
  * <p>
  * {@code chainedBlocksOnNewLine} puts {@code else}, {@code else if}, {@code catch} and {@code finally} on their own line
  * after the {@code }} of the block before. On by default; {@code chainedBlocks=attached} keeps {@code } else {}.
+ * <p>
+ * {@code removeUnusedImports} removes the imports that nothing in the file mentions (see {@link ImportRemover}). Off by
+ * default.
  */
 public record FormatterConfig(int wrapAtColumn, int indent, Set<String> commentRules, Documents documents,
-  boolean chainedBlocksOnNewLine) {
+  boolean chainedBlocksOnNewLine, boolean removeUnusedImports) {
 
   /**
    * The settings for the non-Java files. {@code formats} are the file types to format: {@code java}, {@code json} and
@@ -84,6 +87,12 @@ public record FormatterConfig(int wrapAtColumn, int indent, Set<String> commentR
     this(wrapAtColumn, indent, commentRules, documents, true);
   }
 
+  /** A config that keeps unused imports, the default. */
+  public FormatterConfig(int wrapAtColumn, int indent, Set<String> commentRules, Documents documents,
+    boolean chainedBlocksOnNewLine) {
+    this(wrapAtColumn, indent, commentRules, documents, chainedBlocksOnNewLine, false);
+  }
+
   public FormatterConfig {
     if (wrapAtColumn < 1) {
       throw new IllegalArgumentException("wrapAtColumn must be at least 1, was " + wrapAtColumn);
@@ -113,7 +122,8 @@ public record FormatterConfig(int wrapAtColumn, int indent, Set<String> commentR
       indent,
       rulesProperty(properties),
       documentsProperties(properties),
-      chainedBlocksProperty(properties)
+      chainedBlocksProperty(properties),
+      booleanProperty(properties, "removeUnusedImports")
     );
   }
 
@@ -144,6 +154,17 @@ public record FormatterConfig(int wrapAtColumn, int indent, Set<String> commentR
       intProperty(properties, "markdownWrapAtColumn", Documents.DEFAULT.markdownWrapAtColumn()),
       prose.equals("preserve")
     );
+  }
+
+  /** {@code key}: {@code true} or {@code false} (the default). */
+  private static boolean booleanProperty(Properties properties, String key) {
+    String value = properties.getProperty(key, "false").strip();
+
+    if (!value.equals("true") && !value.equals("false")) {
+      throw new IllegalArgumentException(key + " must be 'true' or 'false', was '" + value + "'");
+    }
+
+    return value.equals("true");
   }
 
   /** {@code chainedBlocks}: {@code newline} (the default) or {@code attached} ({@code } else {}). */

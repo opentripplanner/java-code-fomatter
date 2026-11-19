@@ -6,7 +6,7 @@ import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
 /**
- * Orchestrates the formatting pipeline: validate the input is syntactically valid Java, normalize the spaces between tokens, optionally put chained blocks on their own line, reindent by brace/scope
+ * Orchestrates the formatting pipeline: validate the input is syntactically valid Java, optionally remove unused imports, normalize the spaces between tokens, optionally put chained blocks on their own line, reindent by brace/scope
  * nesting, wrap lines over {@link FormatterConfig#wrapAtColumn()} columns, then re-validate the result as a safety net
  * before it's ever written or printed, and check that the output has exactly the same tokens as the input (ignoring
  * whitespace and comments), so a formatter bug can never change what the program does.
@@ -48,8 +48,12 @@ public final class SourceFormatter {
       return new ValidationFailed(original.diagnostics());
     }
 
+    // Removing imports is the one change that is allowed to alter the tokens, so the token check below compares
+    // against the source with the unused imports removed.
+    String input = config.removeUnusedImports() ? ImportRemover.remove(source) : source;
+
     String reindented = ScopeReindenter.reindent(
-      BlankLineFormatter.format(CommentFormatter.format(chained(SpacingNormalizer.format(source), config))),
+      BlankLineFormatter.format(CommentFormatter.format(chained(SpacingNormalizer.format(input), config))),
       config.indent()
     );
     // ExpressionWrapper hands multi-line spans (switch expressions, anonymous-class bodies) off
@@ -75,7 +79,7 @@ public final class SourceFormatter {
                 "formatting produced invalid Java; this is a formatter bug, not a problem with the input");
     }
 
-    String difference = TokenStream.firstDifference(source, wrapped.text());
+    String difference = TokenStream.firstDifference(input, wrapped.text());
 
     if (difference != null) {
       return new InternalError(
