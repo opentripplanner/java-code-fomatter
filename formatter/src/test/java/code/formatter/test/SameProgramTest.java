@@ -42,6 +42,31 @@ class SameProgramTest {
   }
 
   @Test
+  void textBlockWhitespaceTheCompilerIgnoresIsNotAChange() {
+    String block = "String t = \"\"\"\n    one\n\n    two\n    \"\"\";";
+
+    // a whitespace-only line, trailing spaces, CRLF, and a uniform shift of every line including the closing delimiter
+    assertTrue(SourceFormatter.sameProgram(block, block.replace("\n\n", "\n        \n")));
+    assertTrue(SourceFormatter.sameProgram(block, block.replace("one", "one   ")));
+    assertTrue(SourceFormatter.sameProgram(block, block.replace("\n", "\r\n")));
+    assertTrue(SourceFormatter.sameProgram(block, block.replace("\n    ", "\n          ")));
+  }
+
+  @Test
+  void textBlockChangesTheCompilerSeesAreStillChanges() {
+    String block = "String t = \"\"\"\n    one\n\n    two\n    \"\"\";";
+
+    assertFalse(SourceFormatter.sameProgram(block, block.replace("one", "on")));
+    // the closing delimiter moves, so every line gains indentation in the value
+    assertFalse(SourceFormatter.sameProgram(block, block.replace("\n    \"\"\"", "\n  \"\"\"")));
+    // a blank line is removed
+    assertFalse(SourceFormatter.sameProgram(block, block.replace("\n\n", "\n")));
+    // the text starts on the opening line
+    assertFalse(SourceFormatter.sameProgram(block, block.replace("\"\"\"\n    one", "\"\"\"one")));
+    assertFalse(SourceFormatter.sameProgram(block, block.replace("two", "two\\s")));
+  }
+
+  @Test
   void numbersWithExponentsAreOneToken() {
     assertTrue(SourceFormatter.sameProgram("double d = 1.5e-3 + 0x1p+2;", "double d =\n  1.5e-3\n  + 0x1p+2;"));
     assertFalse(SourceFormatter.sameProgram("double d = 1.5e-3;", "double d = 1.5e-4;"));

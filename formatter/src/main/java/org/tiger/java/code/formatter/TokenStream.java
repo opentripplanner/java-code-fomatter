@@ -5,8 +5,9 @@ import java.util.List;
 
 /**
  * A minimal Java tokenizer used to prove that formatting changed nothing but whitespace and comments: two sources with
- * the same token list are the same program. Whitespace and comments are skipped; string, character and text block
- * literals are kept exactly; operators are matched greedily, except that every {@code >} is a token of its own, so
+ * the same token list are the same program. Whitespace and comments are skipped; string and character literals are
+ * kept exactly; a text block is compared by its value as the compiler computes it (see {@link #textBlockValue}), so a
+ * change that the compiler ignores does not count; operators are matched greedily, except that every {@code >} is a token of its own, so
  * {@code List<List<X>>} and {@code List<List<X> >} compare equal (a shift {@code >>} cannot be split into two tokens
  * without making the program invalid, which the syntax check catches).
  */
@@ -32,7 +33,10 @@ final class TokenStream {
       if (span < spans.size() && spans.get(span).start() == i) {
         LiteralScanner.VerbatimSpan literal = spans.get(span++);
 
-        if (literal.kind() != LiteralScanner.Kind.LINE_COMMENT && literal.kind() != LiteralScanner.Kind.BLOCK_COMMENT) {
+        if (literal.kind() == LiteralScanner.Kind.TEXT_BLOCK) {
+          tokens.add(textBlockValue(source.substring(literal.start(), literal.end())));
+        } else if (literal.kind() != LiteralScanner.Kind.LINE_COMMENT
+          && literal.kind() != LiteralScanner.Kind.BLOCK_COMMENT) {
           tokens.add(source.substring(literal.start(), literal.end()));
         }
 
@@ -85,6 +89,29 @@ final class TokenStream {
     }
 
     return null;
+  }
+
+  /**
+   * A text block as the compiler sees it before escape sequences are translated (JLS 3.10.6): the opening line and its
+   * terminator dropped, line terminators normalized, the common indentation (including that of the closing delimiter's
+   * line) removed, and trailing whitespace removed from every line. Two text blocks with the same result are the same
+   * string, even if they differ in whitespace the compiler ignores: a whitespace-only line, trailing spaces, CRLF
+   * instead of LF, or a uniform shift of the indentation.
+   */
+  private static String textBlockValue(String literal) {
+    int lineEnd = 3;
+
+    while (lineEnd < literal.length() && literal.charAt(lineEnd) != '\n' && literal.charAt(lineEnd) != '\r') {
+      lineEnd++;
+    }
+
+    if (lineEnd >= literal.length() - 3) {
+      return literal;
+    }
+
+    int contentStart = literal.startsWith("\r\n", lineEnd) ? lineEnd + 2 : lineEnd + 1;
+
+    return "\"\"\"\n" + literal.substring(contentStart, literal.length() - 3).stripIndent() + "\"\"\"";
   }
 
   private static int numberEnd(String source, int start) {
