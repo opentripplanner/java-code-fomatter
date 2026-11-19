@@ -81,6 +81,13 @@ refactor, not something to wrap.
 - None after `{`, at the start of a file, after a `case` label, or before `}`.
 - Blocks without braces, one-line blocks, lambdas, anonymous classes and bodiless declarations are left out.
 
+## Unused imports
+
+With `removeUnusedImports=true` in `.jcf/config.properties`, an import is removed when its simple name appears nowhere
+after the imports, in code, Javadoc, comments or strings. This works without a classpath, so it only ever errs on the
+side of keeping an import. Wildcard imports are never removed. The blank lines around the removed imports are collapsed.
+It is off by default.
+
 ## Chained blocks
 
 `else`, `else if`, `catch` and `finally` start a new line after the `}` of the block before, at the same indent. Set

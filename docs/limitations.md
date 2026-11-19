@@ -46,5 +46,5 @@ reported as a warning.
 - A wrapping step that would not make the longest line shorter is skipped.
 - The width is measured in UTF-16 units, not in display columns.
 - Only Java is formatted. Markdown, JSON and GraphQL are not.
-- Unused imports, import order and other static analysis are not handled. Keep a tool such as Spotless for them.
+- Import order and other static analysis are not handled. Keep a tool such as Spotless for them. Unused imports are removed only with `removeUnusedImports=true`, by name: an import stays if its name appears anywhere in the file, so a static import of an overloaded name that is used for only one overload is kept. Wildcard imports are never removed.
 - The Maven plugin needs Maven to run on JDK 25 or newer.
