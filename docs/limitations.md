@@ -2,12 +2,19 @@
 
 Honest list of what the formatter does not do. It is a layout formatter first.
 
-## Spacing inside a line is not changed
+## Spacing inside a line is only partly normalized
 
-The formatter does not add or remove spaces between tokens. `int   a=1,b=2;` stays as written, and so does
-`if(x){`. Code that is already formatted by another tool (such as Prettier or google-java-format) has the spacing in
-place, and the formatter only changes the layout. On messy input, run a spacing tool first. Normalizing the spacing is
-on the list.
+The formatter sets the spaces between tokens on one line: `int   a=1,b=2;` becomes `int a = 1, b = 2;`, `if(x){`
+becomes `if (x) {`, `foo (a , b)` becomes `foo(a, b)`, and `x->x+1` becomes `x -> x + 1`. It never changes a gap that
+has a line break in it, a gap next to a comment, or the inside of a string or text block.
+
+It does not use a parser for this, so a gap is left as written where the tokens alone cannot say what it should be:
+
+- `<` and `>`: `a<b` could be a comparison or the start of generics. `a>b` and `a<b` stay as written.
+- `-` or `+` after `)`: `(int)-x` could be a cast or a subtraction.
+- The `:` of a `case` label, a `default` label, a statement label and `assert`: `case 1 :` stays as written.
+- The gap before `;` or `)` after a `;` in a `for` header, so both `for (;;)` and `for (a; b; )` are kept.
+- A `{` or `}` next to an array initializer's items: `{1, 2 }` keeps its space before `}`.
 
 ## Multi-declarator statements
 

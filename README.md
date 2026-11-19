@@ -198,9 +198,10 @@ honest list of what this formatter does *not* do yet.
 
 ## Status
 
-The formatter replaces Prettier for the Java layout of a project that is already formatted. It does **not** yet
-normalize the spacing inside a line (`int   a=1,b=2;` stays as written), so on messy input run a spacing tool first.
-Markdown, JSON and GraphQL are not formatted. Static analysis, such as removing unused imports, is left to other tools
+The formatter replaces Prettier for the Java layout of a project. It also normalizes the spacing inside a line
+(`int   a=1,b=2;` becomes `int a = 1, b = 2;`), except where the meaning is unclear without a parser, such as
+`a<b`. See [Limitations](docs/limitations.md). JSON and Markdown are formatted when you opt in; GraphQL is not.
+Static analysis, such as removing unused imports, is left to other tools
 (Spotless and Checkstyle). See [Limitations](docs/limitations.md).
 
 ## Documentation

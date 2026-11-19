@@ -225,7 +225,7 @@ indent with a 4-space continuation, so its wrapped lines are indented more.
 | Trailing `// comment` | Moved above the statement | Stays | Stays |
 | Blank lines around blocks | Always one | Not added | Not added |
 | Javadoc | Reformatted; `<p>` on its own line | Reformatted; `<p>Text` | Not touched |
-| Spacing inside a line (`a=1`) | **Not changed** | Normalized | Normalized |
+| Spacing inside a line (`a=1`) | Normalized, except `<` and `>` and a few other unclear places | Normalized | Normalized |
 | Indent | Configurable | Fixed (2, continuation 4) | Configurable |
 | Width | Configurable | Fixed at 100 | Configurable |
 
