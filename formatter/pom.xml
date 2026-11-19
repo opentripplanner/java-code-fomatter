@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    Packages the formatter for the Maven plugin (and for publishing). Day-to-day builds and tests use Jenesis, see
+    docs/development.md. This pom compiles the same sources as Jenesis does, from src/main/java.
+  -->
+  <parent>
+    <groupId>org.tiger.java.code</groupId>
+    <artifactId>formatter-parent</artifactId>
+    <version>1-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>formatter</artifactId>
+
+  <name>Java code formatter</name>
+  <description>A fast, deterministic Java source formatter that proves it did not change the program.</description>
+
+  <properties>
+    <junit.version>6.1.3</junit.version>
+    <!-- Jenesis compiles and runs the tests (it reads the JUnit dependency below); Maven does not -->
+    <maven.test.skip>true</maven.test.skip>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

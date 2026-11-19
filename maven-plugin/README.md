@@ -52,7 +52,7 @@ command line (`mvn jcf:format`) it does not; list them in `sourceRoots` if you n
 
 ## Building and testing
 
-`./build.sh verify` builds the formatter, installs it into the local Maven repository, then builds the plugin and runs
+`./build.sh verify` runs the formatter's tests with Jenesis, then `mvn verify` builds the formatter and the plugin and runs
 the integration tests in `src/it` (each one is a small Maven project run against the plugin).
 
 ## Releasing
