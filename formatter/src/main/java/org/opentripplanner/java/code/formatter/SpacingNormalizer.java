@@ -136,6 +136,11 @@ final class SpacingNormalizer {
       return Gap.KEEP;
     }
 
+    // int @Nullable [] x and String @Nullable ... args: the space after a type annotation is how it is written
+    if ((n.is("[") || n.is("...")) && endsTypeAnnotation(tokens, index - 1)) {
+      return Gap.KEEP;
+    }
+
     if (n.is(",") || n.is(";") || n.is(".") || n.is("::") || p.is(".") || p.is("::") || n.is("[") || p.is("[")
       || n.is("]") || p.is("(") || n.is(")") || p.is("@") || n.is("...") || nr == Role.POSTFIX
       || pr == Role.PREFIX) {
@@ -182,6 +187,35 @@ final class SpacingNormalizer {
     }
 
     return Gap.KEEP;
+  }
+
+  /** Whether the token at {@code last} is the end of an annotation: {@code @A}, {@code @a.b.A} or {@code @A(...)}. */
+  private static boolean endsTypeAnnotation(List<Token> tokens, int last) {
+    int i = last;
+
+    if (tokens.get(i).is(")")) {
+      int depth = 0;
+
+      for (; i >= 0; i--) {
+        if (tokens.get(i).is(")")) {
+          depth++;
+        } else if (tokens.get(i).is("(") && --depth == 0) {
+          break;
+        }
+      }
+
+      i--;
+    }
+
+    if (i < 0 || !tokens.get(i).isWord()) {
+      return false;
+    }
+
+    while (i >= 2 && tokens.get(i - 1).is(".") && tokens.get(i - 2).isWord()) {
+      i -= 2;
+    }
+
+    return i >= 1 && tokens.get(i - 1).is("@");
   }
 
   private static Gap beforeParenthesis(Token p) {
