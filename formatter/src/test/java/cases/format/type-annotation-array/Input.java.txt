@@ -1,0 +1,18 @@
+import org.jspecify.annotations.Nullable;
+
+class A {
+    int @Nullable [] a;
+    String @Nullable [][] b;
+    int @org.jspecify.annotations.Nullable [] c;
+    int @Size(max = 3) [] d;
+    String @Nullable [] @Nullable [] e;
+    int @Nullable[] g;
+
+    T @Nullable [] f(T @Nullable [] x, S @Nullable ... a) {
+        return x;
+    }
+
+    int h(int[] v, int i) {
+        return v [i];
+    }
+}
